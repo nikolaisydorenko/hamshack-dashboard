@@ -16,7 +16,7 @@
       <div class="mb-3">
         <label class="tp-card-header d-block mb-1">Callsign</label>
         <input type="text" id="inputCallsign" class="form-control tp-form-control"
-               placeholder="e.g. VA3CZT" maxlength="12"
+               placeholder="e.g. W1AW" maxlength="12"
                style="text-transform:uppercase; font-family:monospace; font-size:1.1rem; letter-spacing:2px"
                value="{{ settings.callsign }}"
                oninput="this.value=this.value.toUpperCase()">
@@ -26,7 +26,7 @@
         <label class="tp-card-header d-block mb-1">Home QTH — Search by city or address</label>
         <div class="input-group">
           <input type="text" id="inputLocation" class="form-control tp-form-control"
-                 placeholder="e.g. Etobicoke, ON or M9A 0A1"
+                 placeholder="e.g. Toronto, ON or 90210"
                  value="{{ settings.home_label }}">
           <button class="btn btn-tp" onclick="geocode()">
             <i class="fa-solid fa-magnifying-glass"></i> Find
