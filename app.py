@@ -6,6 +6,7 @@ import io
 import math
 import time
 import xml.etree.ElementTree as ET
+import codecs
 from datetime import datetime, timezone
 
 app = Flask(__name__)
@@ -488,6 +489,79 @@ def api_custom_repeaters_delete(rid):
     conn.commit()
     conn.close()
     return jsonify({"status": "ok"})
+
+@app.route("/api/custom_repeaters/import", methods=["POST"])
+def api_custom_repeaters_import():
+    """Accept a RepeaterBook CSV upload and bulk-import into custom_repeaters."""
+    f = request.files.get("file")
+    if not f:
+        return jsonify({"error": "no file"}), 400
+    try:
+        stream = codecs.iterdecode(f.stream, "utf-8-sig")  # handles BOM
+        reader = csv.DictReader(stream)
+        # Normalise header names: strip whitespace, lower
+        def col(row, *names):
+            for n in names:
+                for k in row:
+                    if k.strip().lower() == n.lower():
+                        return row[k].strip()
+            return ""
+
+        inserted = 0
+        skipped  = 0
+        conn = get_db()
+        for row in reader:
+            try:
+                freq_str = col(row, "Frequency", "Output Frequency", "Downlink")
+                if not freq_str:
+                    skipped += 1
+                    continue
+                freq = float(freq_str)
+                if freq <= 0:
+                    skipped += 1
+                    continue
+
+                input_str = col(row, "Input Freq", "Input Frequency", "Uplink", "Input")
+                offset_mhz = 0.0
+                if input_str:
+                    try:
+                        offset_mhz = round(float(input_str) - freq, 4)
+                    except ValueError:
+                        pass
+
+                ctcss   = col(row, "CTCSS", "PL", "Tone", "Access Tone") or ""
+                mode    = col(row, "Mode") or "FM"
+                call    = col(row, "Callsign", "Call") or ""
+                city    = col(row, "Location", "City", "Landmark") or ""
+                lat_s   = col(row, "Latitude", "Lat")
+                lon_s   = col(row, "Longitude", "Lon", "Long")
+                lat     = float(lat_s) if lat_s else None
+                lon     = float(lon_s) if lon_s else None
+                notes   = col(row, "Notes", "Description") or ""
+
+                # Skip duplicates (same callsign + freq already in table)
+                existing = conn.execute(
+                    "SELECT 1 FROM custom_repeaters WHERE callsign=? AND ABS(frequency-?)<0.001",
+                    (call.upper(), freq)
+                ).fetchone()
+                if existing:
+                    skipped += 1
+                    continue
+
+                conn.execute(
+                    "INSERT INTO custom_repeaters (callsign,frequency,offset_mhz,ctcss,mode,city,notes,lat,lon)"
+                    " VALUES (?,?,?,?,?,?,?,?,?)",
+                    (call.upper(), freq, offset_mhz, ctcss, mode, city, notes, lat, lon)
+                )
+                inserted += 1
+            except Exception:
+                skipped += 1
+                continue
+        conn.commit()
+        conn.close()
+        return jsonify({"status": "ok", "inserted": inserted, "skipped": skipped})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/dx")
 def api_dx():

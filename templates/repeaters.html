@@ -67,6 +67,10 @@
           <button class="btn btn-tp-outline" onclick="openAddModal()" title="Add custom repeater">
             <i class="fa-solid fa-plus"></i>
           </button>
+          <label class="btn btn-tp-outline" title="Import RepeaterBook CSV" style="cursor:pointer; margin:0">
+            <i class="fa-solid fa-file-import"></i>
+            <input type="file" id="csvImportInput" accept=".csv" style="display:none" onchange="importCSV(this)">
+          </label>
         </div>
 
       </div>
@@ -322,6 +326,31 @@ function deleteRepeater(id) {
 function showAddMsg(msg, color) {
   const el = document.getElementById('addMsg');
   el.textContent = msg; el.style.color = color; el.style.display = 'block';
+}
+
+function importCSV(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;background:var(--tp-card);border:1px solid var(--tp-border);border-radius:10px;padding:1rem 1.4rem;color:#fff;font-size:0.9rem;box-shadow:0 4px 20px rgba(0,0,0,0.5)';
+  toast.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Importing…';
+  document.body.appendChild(toast);
+
+  const form = new FormData();
+  form.append('file', file);
+  fetch('/api/custom_repeaters/import', {method: 'POST', body: form})
+    .then(r => r.json())
+    .then(d => {
+      if (d.error) {
+        toast.innerHTML = `<i class="fa-solid fa-triangle-exclamation me-2" style="color:var(--tp-red)"></i>${d.error}`;
+      } else {
+        toast.innerHTML = `<i class="fa-solid fa-circle-check me-2" style="color:var(--tp-green)"></i><strong>${d.inserted}</strong> repeaters imported, ${d.skipped} skipped (duplicates/errors)`;
+        searchRepeaters();
+      }
+      setTimeout(() => toast.remove(), 5000);
+    })
+    .catch(e => { toast.innerHTML = `Error: ${e.message}`; setTimeout(() => toast.remove(), 4000); });
+  input.value = '';
 }
 
 // Auto-search if home QTH is configured
