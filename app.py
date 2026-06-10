@@ -160,6 +160,10 @@ def tool_antenna():
 def tool_bandplan():
     return render_template("bandplan.html", settings=get_settings())
 
+@app.route("/tools/bearing")
+def tool_bearing():
+    return render_template("bearing.html", settings=get_settings())
+
 @app.route("/dx")
 def dx():
     return render_template("dx.html", settings=get_settings())
@@ -422,6 +426,8 @@ def api_callsign():
                 "email":   "",
                 "addr":    f"{addr.get('line1','')} {addr.get('line2','')}".strip(),
                 "source":  "FCC ULS",
+                "lat":     loc.get("latitude", ""),
+                "lon":     loc.get("longitude", ""),
             })
     except Exception:
         pass

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HamShack — Bearing Calculator</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <link href="style.css" rel="stylesheet">
+</head>
+<body>
+<div class="bg-glow"></div>
+<nav class="navbar navbar-expand-lg navbar-dark tp-navbar">
+  <div class="container-fluid">
+    <a class="navbar-brand tp-brand" href="index.html"><i class="fa-solid fa-tower-broadcast me-2"></i>HAMSHACK</a>
+    <span class="navbar-text tp-callsign me-3" id="navCallsign">—</span>
+    <button class="btn btn-sm ms-1" onclick="HS.openSettings()" style="color:var(--text-faint);background:none;border:1px solid var(--border);border-radius:8px;padding:3px 10px" title="Station settings"><i class="fa-solid fa-gear"></i></button>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu"><span class="navbar-toggler-icon"></span></button>
+    <div class="collapse navbar-collapse" id="navMenu">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item"><a class="nav-link" href="index.html"><i class="fa-solid fa-gauge-high me-1"></i>Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link" href="repeaters.html"><i class="fa-solid fa-radio me-1"></i>Repeaters</a></li>
+        <li class="nav-item"><a class="nav-link" href="hf.html"><i class="fa-solid fa-sun me-1"></i>HF Propagation</a></li>
+        <li class="nav-item"><a class="nav-link" href="dx.html"><i class="fa-solid fa-satellite-dish me-1"></i>DX Cluster</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"><i class="fa-solid fa-screwdriver-wrench me-1"></i>Tools</a>
+          <ul class="dropdown-menu dropdown-menu-dark">
+            <li><a class="dropdown-item" href="callsign.html"><i class="fa-solid fa-id-card me-2"></i>Callsign Lookup</a></li>
+            <li><a class="dropdown-item" href="antenna.html"><i class="fa-solid fa-wifi me-2"></i>Antenna Calculator</a></li>
+            <li><a class="dropdown-item" href="bandplan.html"><i class="fa-solid fa-chart-bar me-2"></i>Band Plan</a></li>
+            <li><a class="dropdown-item" href="bearing.html"><i class="fa-solid fa-compass me-2"></i>Bearing Calculator</a></li>
+          </ul>
+        </li>
+      </ul>
+      <ul class="navbar-nav ms-auto align-items-center gap-2">
+        <li class="nav-item"><span class="navbar-text tp-utc" id="utcClock">UTC --:--:--</span></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid py-4 px-4" style="max-width:820px">
+  <h1 class="tp-page-title mb-1"><i class="fa-solid fa-compass me-2"></i>Bearing Calculator</h1>
+  <p style="color:var(--text-faint);font-size:0.82rem;margin-bottom:1.5rem">Great circle bearing &amp; distance — point your beam or plan a contact</p>
+
+  <div class="row g-3 mb-4">
+    <!-- From -->
+    <div class="col-12 col-md-5">
+      <div class="tp-card h-100">
+        <div class="tp-card-header mb-2"><i class="fa-solid fa-house me-1"></i> From — Your QTH</div>
+        <div id="fromCallsign" style="font-family:'JetBrains Mono',monospace;font-size:1.3rem;font-weight:700;color:var(--cyan)">—</div>
+        <div id="fromCoords" style="font-size:0.82rem;color:var(--text-faint);margin-bottom:0.75rem">—</div>
+        <button class="btn btn-tp-outline btn-sm" onclick="HS.openSettings()">
+          <i class="fa-solid fa-gear me-1"></i>Change QTH
+        </button>
+      </div>
+    </div>
+
+    <!-- Arrow -->
+    <div class="col-12 col-md-2 d-flex align-items-center justify-content-center">
+      <i class="fa-solid fa-arrow-right fa-2x" style="color:var(--border-lt)"></i>
+    </div>
+
+    <!-- To -->
+    <div class="col-12 col-md-5">
+      <div class="tp-card h-100">
+        <div class="tp-card-header mb-2"><i class="fa-solid fa-location-dot me-1"></i> To — Destination</div>
+        <input type="text" id="destInput" class="form-control tp-form-control mb-2"
+               placeholder="Callsign, grid (FN03), or lat,lon"
+               style="font-family:'JetBrains Mono',monospace;font-size:1rem;letter-spacing:1px"
+               autocomplete="off" autocapitalize="characters" spellcheck="false">
+        <button class="btn btn-tp w-100" onclick="calculate()">
+          <i class="fa-solid fa-compass me-2"></i>Calculate Bearing
+        </button>
+        <div id="destInfo" style="font-size:0.78rem;color:var(--text-faint);margin-top:0.5rem;min-height:1.2em"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="resultsDiv" style="display:none">
+    <div class="row g-3 mb-3">
+      <!-- Compass -->
+      <div class="col-12 col-md-4 d-flex align-items-center justify-content-center">
+        <div class="tp-card text-center" style="width:100%">
+          <div class="tp-card-header mb-3">Compass</div>
+          <svg viewBox="0 0 200 200" width="170" height="170" style="display:block;margin:0 auto">
+            <circle cx="100" cy="100" r="90" fill="none" stroke="var(--border-lt)" stroke-width="1.5"/>
+            <circle cx="100" cy="100" r="3" fill="var(--border-lt)"/>
+            <g stroke="var(--border)" stroke-width="1">
+              <line x1="100" y1="12" x2="100" y2="22"/>
+              <line x1="100" y1="178" x2="100" y2="188"/>
+              <line x1="12" y1="100" x2="22" y2="100"/>
+              <line x1="178" y1="100" x2="188" y2="100"/>
+            </g>
+            <text x="100" y="10" text-anchor="middle" fill="var(--red)" font-size="13" font-weight="700" font-family="JetBrains Mono,monospace">N</text>
+            <text x="100" y="198" text-anchor="middle" fill="var(--text-faint)" font-size="11" font-family="JetBrains Mono,monospace">S</text>
+            <text x="192" y="104" text-anchor="middle" fill="var(--text-faint)" font-size="11" font-family="JetBrains Mono,monospace">E</text>
+            <text x="8" y="104" text-anchor="middle" fill="var(--text-faint)" font-size="11" font-family="JetBrains Mono,monospace">W</text>
+            <text x="160" y="45" text-anchor="middle" fill="var(--border-lt)" font-size="9" font-family="JetBrains Mono,monospace">NE</text>
+            <text x="40" y="45" text-anchor="middle" fill="var(--border-lt)" font-size="9" font-family="JetBrains Mono,monospace">NW</text>
+            <text x="160" y="163" text-anchor="middle" fill="var(--border-lt)" font-size="9" font-family="JetBrains Mono,monospace">SE</text>
+            <text x="40" y="163" text-anchor="middle" fill="var(--border-lt)" font-size="9" font-family="JetBrains Mono,monospace">SW</text>
+            <g id="needleGroup" transform="rotate(0,100,100)">
+              <polygon points="100,18 96,100 100,108 104,100" fill="var(--cyan)" opacity="0.9"/>
+              <polygon points="100,182 96,100 100,108 104,100" fill="var(--border-lt)" opacity="0.6"/>
+            </g>
+            <circle cx="100" cy="100" r="5" fill="var(--cyan)"/>
+          </svg>
+          <div id="bearingDeg" style="font-family:'JetBrains Mono',monospace;font-size:2rem;font-weight:700;color:var(--cyan);margin-top:0.5rem">—°</div>
+          <div id="bearingDir" style="font-size:0.82rem;color:var(--text-faint)">—</div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="col-12 col-md-8">
+        <div class="row g-3">
+          <div class="col-6">
+            <div class="tp-card text-center">
+              <div class="tp-card-header mb-1">Short Path</div>
+              <div id="spBearing" class="tp-stat-value">—</div>
+              <div class="tp-stat-label">azimuth</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="tp-card text-center">
+              <div class="tp-card-header mb-1">Long Path</div>
+              <div id="lpBearing" class="tp-stat-value" style="color:var(--teal)">—</div>
+              <div class="tp-stat-label">azimuth (+180°)</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="tp-card text-center">
+              <div class="tp-card-header mb-1">Distance</div>
+              <div id="distKm" class="tp-stat-value" style="color:var(--yellow)">—</div>
+              <div class="tp-stat-label">kilometres</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="tp-card text-center">
+              <div class="tp-card-header mb-1">Distance</div>
+              <div id="distMi" class="tp-stat-value" style="color:var(--yellow)">—</div>
+              <div class="tp-stat-label">miles</div>
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="tp-card">
+              <div class="tp-card-header mb-2">Reverse bearing (destination → you)</div>
+              <div class="d-flex gap-4 flex-wrap">
+                <div><span style="color:var(--text-faint);font-size:0.82rem">Short path: </span><span id="revSp" style="font-family:monospace;font-weight:700;color:var(--cyan)">—</span></div>
+                <div><span style="color:var(--text-faint);font-size:0.82rem">Long path: </span><span id="revLp" style="font-family:monospace;font-weight:700;color:var(--teal)">—</span></div>
+                <div><span style="color:var(--text-faint);font-size:0.82rem">Dest grid: </span><span id="destGrid" style="font-family:monospace;font-weight:700;color:var(--text)">—</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="errorDiv" class="alert mt-2" style="display:none;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);color:var(--red);border-radius:8px;font-size:0.85rem"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function updateClock(){const n=new Date(),h=String(n.getUTCHours()).padStart(2,'0'),m=String(n.getUTCMinutes()).padStart(2,'0'),s=String(n.getUTCSeconds()).padStart(2,'0');document.getElementById('utcClock').textContent=`UTC ${h}:${m}:${s}`;}
+updateClock();setInterval(updateClock,1000);
+document.querySelectorAll('.nav-link:not(.dropdown-toggle),.dropdown-item').forEach(a=>{if(a.getAttribute('href')===(location.pathname.split('/').pop()||'index.html'))a.classList.add('active');});
+
+const DIRS=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+function toRad(d){return d*Math.PI/180;}
+function bearing(lat1,lon1,lat2,lon2){const φ1=toRad(lat1),φ2=toRad(lat2),Δλ=toRad(lon2-lon1);const y=Math.sin(Δλ)*Math.cos(φ2);const x=Math.cos(φ1)*Math.sin(φ2)-Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);return(Math.atan2(y,x)*180/Math.PI+360)%360;}
+function haversine(lat1,lon1,lat2,lon2){const R=6371,d2r=Math.PI/180;const dlat=(lat2-lat1)*d2r,dlon=(lon2-lon1)*d2r;const a=Math.sin(dlat/2)**2+Math.cos(lat1*d2r)*Math.cos(lat2*d2r)*Math.sin(dlon/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
+function latLonToGrid(lat,lon){lon+=180;lat+=90;const f=Math.floor,A=n=>String.fromCharCode(65+n);return A(f(lon/20))+A(f(lat/10))+String(f((lon%20)/2))+String(f(lat%10))+A(f((lon%2)/(2/24)))+A(f((lat%1)/(10/24)));}
+function gridToLatLon(g){g=g.toUpperCase();if(!/^[A-R]{2}[0-9]{2}([A-X]{2})?$/.test(g))return null;let lon=(g.charCodeAt(0)-65)*20-180,lat=(g.charCodeAt(1)-65)*10-90;lon+=parseInt(g[2])*2;lat+=parseInt(g[3]);if(g.length>=6){lon+=(g.charCodeAt(4)-65)*(2/24);lat+=(g.charCodeAt(5)-65)*(10/240);lon+=1/24;lat+=1/48;}else{lon+=1;lat+=0.5;}return{lat,lon};}
+
+function updateFromPanel(){
+  const s=HS.get();
+  document.getElementById('fromCallsign').textContent=s.callsign||'—';
+  document.getElementById('fromCoords').textContent=s.lat?`${s.lat}, ${s.lon}${s.grid?' · '+s.grid:''}`:s.city||'No location set — click ⚙';
+}
+function onSettingsSaved(){updateFromPanel();}
+
+function showResult(toLat,toLon,label){
+  const s=HS.get();
+  if(!s.lat){showError('Set your location first via the ⚙ button.');return;}
+  const sp=bearing(s.lat,s.lon,toLat,toLon);
+  const lp=(sp+180)%360;
+  const dist=haversine(s.lat,s.lon,toLat,toLon);
+  const revSp=bearing(toLat,toLon,s.lat,s.lon);
+  const revLp=(revSp+180)%360;
+  const dir=DIRS[Math.round(sp/22.5)%16];
+  const grid=latLonToGrid(toLat,toLon);
+  document.getElementById('needleGroup').setAttribute('transform',`rotate(${sp.toFixed(1)},100,100)`);
+  document.getElementById('bearingDeg').textContent=sp.toFixed(1)+'°';
+  document.getElementById('bearingDir').textContent=dir+' — Short path';
+  document.getElementById('spBearing').textContent=sp.toFixed(1)+'°';
+  document.getElementById('lpBearing').textContent=lp.toFixed(1)+'°';
+  document.getElementById('distKm').textContent=dist<1000?dist.toFixed(0):Math.round(dist/10)*10;
+  document.getElementById('distMi').textContent=Math.round(dist*0.621371);
+  document.getElementById('revSp').textContent=revSp.toFixed(1)+'°';
+  document.getElementById('revLp').textContent=revLp.toFixed(1)+'°';
+  document.getElementById('destGrid').textContent=grid;
+  if(label)document.getElementById('destInfo').textContent=label;
+  document.getElementById('resultsDiv').style.display='';
+  document.getElementById('errorDiv').style.display='none';
+}
+
+function showError(msg){document.getElementById('errorDiv').textContent=msg;document.getElementById('errorDiv').style.display='';document.getElementById('resultsDiv').style.display='none';}
+
+async function calculate(){
+  const raw=document.getElementById('destInput').value.trim().toUpperCase();
+  if(!raw){showError('Enter a callsign, grid square, or lat,lon coordinates.');return;}
+
+  if(/^-?[\d.]+\s*,\s*-?[\d.]+$/.test(raw)){
+    const[a,b]=raw.split(',').map(Number);
+    showResult(a,b,`${a.toFixed(4)}, ${b.toFixed(4)}`);return;
+  }
+  if(/^[A-R]{2}[0-9]{2}([A-X]{2})?$/.test(raw)){
+    const pos=gridToLatLon(raw);
+    if(pos)showResult(pos.lat,pos.lon,`Grid ${raw}`);
+    else showError('Invalid grid square.');return;
+  }
+  // Callsign — callook.info for US, grid lookup otherwise
+  document.getElementById('destInfo').textContent='Looking up '+raw+'…';
+  const isUS=/^[AKNW]/.test(raw);
+  if(isUS){
+    try{
+      const r=await fetch(`https://callook.info/${raw}/json`);
+      const d=await r.json();
+      if(d.status==='VALID'&&d.location?.latitude){
+        showResult(parseFloat(d.location.latitude),parseFloat(d.location.longitude),`${raw} — ${d.name||''} (${d.location.gridsquare||''})`);
+      }else if(d.location?.gridsquare){
+        const pos=gridToLatLon(d.location.gridsquare);
+        if(pos)showResult(pos.lat,pos.lon,`${raw} — ${d.name||''} (${d.location.gridsquare})`);
+        else showError(raw+' found but no usable location.');
+      }else{showError(raw+' not found in FCC database.');}
+    }catch(e){showError('Lookup failed: '+e.message);}
+  }else{
+    // Non-US: try to get DXCC lat/lon from HamQTH via allorigins
+    document.getElementById('destInfo').textContent='Non-US callsign — enter grid square for exact location';
+    showError(`${raw} is a non-US callsign. Enter their grid square (e.g. JN48) or lat,lon for exact bearing.`);
+  }
+}
+
+document.getElementById('destInput').addEventListener('keydown',e=>{if(e.key==='Enter')calculate();});
+document.addEventListener('DOMContentLoaded', updateFromPanel);
+</script>
+<script src="settings.js"></script>
+</body>
+</html>
