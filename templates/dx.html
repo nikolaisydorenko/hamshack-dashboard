@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}DX Cluster{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-12 d-flex align-items-center gap-3 flex-wrap">
+    <h5 class="tp-section-title mb-0"><i class="fa-solid fa-satellite-dish me-2"></i>DX Cluster Feed</h5>
+    <span id="lastUpdated" style="font-size:0.78rem; color:var(--tp-muted)">Loading…</span>
+    <div class="ms-auto d-flex gap-2 align-items-center">
+      <select id="bandFilter" class="form-select tp-form-control" style="width:auto; font-size:0.85rem" onchange="load()">
+        <option value="all">All bands</option>
+        <option value="160m">160m</option>
+        <option value="80m">80m</option>
+        <option value="40m">40m</option>
+        <option value="30m">30m</option>
+        <option value="20m">20m</option>
+        <option value="17m">17m</option>
+        <option value="15m">15m</option>
+        <option value="12m">12m</option>
+        <option value="10m">10m</option>
+        <option value="6m">6m</option>
+        <option value="2m">2m</option>
+        <option value="70cm">70cm</option>
+      </select>
+      <button class="btn btn-tp-outline btn-sm" onclick="load()" title="Refresh">
+        <i class="fa-solid fa-arrows-rotate"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="loadingDiv" class="text-center py-5" style="display:none">
+  <div class="tp-spinner mx-auto mb-3"></div>
+  <div style="color:var(--tp-muted); font-size:0.85rem">Fetching DX spots…</div>
+</div>
+
+<div id="tableDiv">
+  <div class="tp-card p-0" style="overflow:auto">
+    <table class="table tp-table mb-0" id="dxTable">
+      <thead>
+        <tr>
+          <th style="width:120px">DX Call</th>
+          <th style="width:110px">Frequency</th>
+          <th style="width:70px">Band</th>
+          <th style="width:110px">Spotter</th>
+          <th>Comment</th>
+          <th style="width:90px">Time (UTC)</th>
+        </tr>
+      </thead>
+      <tbody id="dxBody">
+        <tr><td colspan="6" class="text-center" style="color:var(--tp-muted); padding:2rem">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div style="font-size:0.75rem; color:var(--tp-muted); margin-top:0.5rem">
+    <i class="fa-solid fa-circle-info me-1"></i>
+    Data via <a href="https://www.dxsummit.fi" target="_blank" style="color:var(--tp-accent)">DX Summit</a>. Auto-refreshes every 60 seconds.
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const BAND_COLORS = {
+  '160m': '#9966ff', '80m': '#ff6b6b', '60m': '#ff9966',
+  '40m': '#ffcc00',  '30m': '#99ff66', '20m': '#00d4aa',
+  '17m': '#66ccff',  '15m': '#4da6ff', '12m': '#cc99ff',
+  '10m': '#ff6699',  '6m':  '#ff99cc', '2m':  '#66ffcc', '70cm': '#ffff66',
+};
+
+function bandBadge(band) {
+  const col = BAND_COLORS[band] || '#888';
+  return `<span style="font-size:0.72rem; padding:2px 7px; border-radius:4px; background:${col}22; color:${col}; border:1px solid ${col}; font-weight:700; font-family:monospace">${band || '?'}</span>`;
+}
+
+function fmtTime(iso) {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    return d.toUTCString().slice(17, 22);
+  } catch { return iso.slice(0,16); }
+}
+
+function load() {
+  const band = document.getElementById('bandFilter').value;
+  document.getElementById('loadingDiv').style.display = 'block';
+
+  fetch('/api/dx?band=' + encodeURIComponent(band))
+    .then(r => r.json())
+    .then(spots => {
+      document.getElementById('loadingDiv').style.display = 'none';
+      if (spots.error) {
+        document.getElementById('dxBody').innerHTML =
+          `<tr><td colspan="6" style="color:var(--tp-red); text-align:center; padding:1.5rem">${spots.error}</td></tr>`;
+        return;
+      }
+      if (!spots.length) {
+        document.getElementById('dxBody').innerHTML =
+          `<tr><td colspan="6" style="color:var(--tp-muted); text-align:center; padding:1.5rem">No spots found for this filter.</td></tr>`;
+        return;
+      }
+      const rows = spots.map(s => {
+        const freq = s.frequency ? parseFloat(s.frequency).toFixed(1) : '—';
+        const comment = (s.comment || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        return `<tr>
+          <td class="call-cell" style="font-size:1rem">${s.dx_call || '—'}</td>
+          <td class="freq-cell">${freq} kHz</td>
+          <td>${bandBadge(s.band)}</td>
+          <td style="font-size:0.8rem; color:var(--tp-muted)">${s.spotter || '—'}</td>
+          <td style="font-size:0.82rem; color:var(--tp-text); max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title="${comment}">${comment || '—'}</td>
+          <td style="font-family:monospace; font-size:0.82rem; color:var(--tp-muted)">${fmtTime(s.time)}</td>
+        </tr>`;
+      }).join('');
+      document.getElementById('dxBody').innerHTML = rows;
+      document.getElementById('lastUpdated').textContent =
+        `Updated ${new Date().toUTCString().slice(17,22)} UTC · ${spots.length} spots`;
+    })
+    .catch(e => {
+      document.getElementById('loadingDiv').style.display = 'none';
+      document.getElementById('dxBody').innerHTML =
+        `<tr><td colspan="6" style="color:var(--tp-red); text-align:center; padding:1.5rem">Error: ${e.message}</td></tr>`;
+    });
+}
+
+load();
+setInterval(load, 60000);
+</script>
+{% endblock %}

@@ -48,6 +48,39 @@
             <i class="fa-solid fa-map-location-dot me-1"></i>APRS
           </a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.path == '/dx' %}active{% endif %}" href="/dx">
+            <i class="fa-solid fa-satellite-dish me-1"></i>DX Cluster
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.path == '/events' %}active{% endif %}" href="/events">
+            <i class="fa-solid fa-calendar-days me-1"></i>Events
+          </a>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle {% if request.path.startswith('/tools') %}active{% endif %}"
+             href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fa-solid fa-screwdriver-wrench me-1"></i>Tools
+          </a>
+          <ul class="dropdown-menu dropdown-menu-dark" style="background:var(--tp-card); border:1px solid var(--tp-border)">
+            <li>
+              <a class="dropdown-item {% if request.path == '/tools/callsign' %}active{% endif %}" href="/tools/callsign">
+                <i class="fa-solid fa-id-card me-2"></i>Callsign Lookup
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item {% if request.path == '/tools/antenna' %}active{% endif %}" href="/tools/antenna">
+                <i class="fa-solid fa-wifi me-2"></i>Antenna Calculator
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item {% if request.path == '/tools/bandplan' %}active{% endif %}" href="/tools/bandplan">
+                <i class="fa-solid fa-chart-bar me-2"></i>Band Plan
+              </a>
+            </li>
+          </ul>
+        </li>
       </ul>
       <ul class="navbar-nav ms-auto align-items-center gap-2">
         <li class="nav-item">

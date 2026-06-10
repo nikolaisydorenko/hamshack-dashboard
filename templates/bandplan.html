@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}Band Plan{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-4">
+  <div class="col-12 d-flex align-items-center gap-3">
+    <h5 class="tp-section-title mb-0"><i class="fa-solid fa-chart-bar me-2"></i>Band Plan Reference</h5>
+    <span style="font-size:0.78rem; color:var(--tp-muted)">North American / Canadian allocations (ISED / ITU Region 2)</span>
+  </div>
+</div>
+
+<!-- Legend -->
+<div class="row g-2 mb-3">
+  <div class="col-12">
+    <div class="tp-card py-2 px-3 d-flex flex-wrap gap-3" style="font-size:0.78rem">
+      <span><span class="tp-badge" style="background:rgba(0,212,170,0.15); color:var(--tp-accent); border:1px solid var(--tp-accent)">CW</span> Morse</span>
+      <span><span class="tp-badge" style="background:rgba(0,136,255,0.15); color:#4da6ff; border:1px solid #4da6ff">SSB</span> Phone (LSB/USB)</span>
+      <span><span class="tp-badge" style="background:rgba(255,209,102,0.15); color:var(--tp-yellow); border:1px solid var(--tp-yellow)">DIG</span> Digital modes</span>
+      <span><span class="tp-badge" style="background:rgba(255,107,107,0.15); color:var(--tp-red); border:1px solid var(--tp-red)">FM</span> FM voice</span>
+      <span><span class="tp-badge" style="background:rgba(160,160,200,0.15); color:#aaa; border:1px solid #666">BEACON</span> Beacons / experimental</span>
+    </div>
+  </div>
+</div>
+
+<!-- HF bands -->
+<div class="row g-3 mb-4">
+  <div class="col-12">
+    <h5 class="tp-section-title"><i class="fa-solid fa-sun me-2" style="color:var(--tp-yellow)"></i>HF Bands</h5>
+  </div>
+
+  {% set hf_bands = [
+    ('160m', '1.800–2.000 MHz', [
+      ('1.800–1.840','CW, RTTY/Digital','cw'),
+      ('1.840–1.850','USB phone, digital','dig'),
+      ('1.850–2.000','SSB phone (LSB)','ssb'),
+    ]),
+    ('80m', '3.500–4.000 MHz', [
+      ('3.500–3.525','CW (DX window)','cw'),
+      ('3.525–3.600','CW','cw'),
+      ('3.570–3.600','RTTY / Digital','dig'),
+      ('3.600–3.700','Phone (LSB)','ssb'),
+      ('3.790–3.800','DX phone window','ssb'),
+      ('3.800–4.000','Phone (LSB)','ssb'),
+    ]),
+    ('60m', '5.330.5, 5.346.5, 5.357, 5.371.5, 5.403.5 kHz', [
+      ('5 channels only','USB, 2.8 kHz BW limit','ssb'),
+      ('USB only','Max 100W ERP','ssb'),
+    ]),
+    ('40m', '7.000–7.300 MHz', [
+      ('7.000–7.025','CW (DX)','cw'),
+      ('7.025–7.125','CW','cw'),
+      ('7.080–7.125','RTTY / Digital','dig'),
+      ('7.125–7.175','Phone (LSB)','ssb'),
+      ('7.175–7.300','Phone (LSB)','ssb'),
+    ]),
+    ('30m', '10.100–10.150 MHz', [
+      ('10.100–10.130','CW','cw'),
+      ('10.130–10.150','RTTY / Digital','dig'),
+    ]),
+    ('20m', '14.000–14.350 MHz', [
+      ('14.000–14.025','CW (DX)','cw'),
+      ('14.025–14.150','CW','cw'),
+      ('14.070–14.099','Digital modes (FT8: 14.074)','dig'),
+      ('14.100','NCDXF/IBP Beacons','beacon'),
+      ('14.150–14.350','USB phone','ssb'),
+      ('14.225','SSTV calling','ssb'),
+    ]),
+    ('17m', '18.068–18.168 MHz', [
+      ('18.068–18.110','CW','cw'),
+      ('18.100–18.110','RTTY / Digital (FT8: 18.100)','dig'),
+      ('18.110–18.168','USB phone','ssb'),
+    ]),
+    ('15m', '21.000–21.450 MHz', [
+      ('21.000–21.070','CW','cw'),
+      ('21.070–21.110','RTTY / Digital (FT8: 21.074)','dig'),
+      ('21.150','NCDXF Beacons','beacon'),
+      ('21.200–21.450','USB phone','ssb'),
+    ]),
+    ('12m', '24.890–24.990 MHz', [
+      ('24.890–24.930','CW','cw'),
+      ('24.920–24.930','RTTY / Digital','dig'),
+      ('24.930–24.990','USB phone','ssb'),
+    ]),
+    ('10m', '28.000–29.700 MHz', [
+      ('28.000–28.070','CW','cw'),
+      ('28.070–28.190','RTTY / Digital (FT8: 28.074)','dig'),
+      ('28.200–28.300','Beacons','beacon'),
+      ('28.300–29.300','USB phone','ssb'),
+      ('29.000–29.200','AM phone','ssb'),
+      ('29.300–29.510','Satellites','beacon'),
+      ('29.510–29.700','FM repeaters (+100 kHz)','fm'),
+    ]),
+    ('6m', '50.000–54.000 MHz', [
+      ('50.000–50.100','CW','cw'),
+      ('50.060–50.080','Beacons','beacon'),
+      ('50.100–50.300','SSB/CW (DX)','ssb'),
+      ('50.313','FT8','dig'),
+      ('51.120–51.180','FM simplex','fm'),
+      ('52.525','FM calling','fm'),
+      ('52.000–54.000','FM repeaters (–1 MHz)','fm'),
+    ]),
+  ] %}
+
+  {% for band, freqrange, segments in hf_bands %}
+  <div class="col-12 col-md-6">
+    <div class="tp-card p-0" style="overflow:hidden">
+      <div class="px-3 py-2 d-flex justify-content-between align-items-center"
+           style="background:rgba(0,212,170,0.07); border-bottom:1px solid var(--tp-border)">
+        <strong style="color:var(--tp-accent); font-size:1.05rem">{{ band }}</strong>
+        <span style="font-size:0.75rem; color:var(--tp-muted); font-family:monospace">{{ freqrange }}</span>
+      </div>
+      <table class="table tp-table mb-0" style="font-size:0.8rem">
+        <tbody>
+          {% for freq, desc, type in segments %}
+          {% set badge_styles = {
+            'cw':     ('rgba(0,212,170,0.15)', 'var(--tp-accent)', 'CW'),
+            'ssb':    ('rgba(0,136,255,0.15)',  '#4da6ff', 'SSB'),
+            'dig':    ('rgba(255,209,102,0.15)','var(--tp-yellow)', 'DIG'),
+            'fm':     ('rgba(255,107,107,0.15)','var(--tp-red)', 'FM'),
+            'beacon': ('rgba(160,160,200,0.15)','#aaa', 'BCN'),
+          } %}
+          {% if type in badge_styles %}
+          {% set bg, color, label = badge_styles[type] %}
+          <tr>
+            <td style="font-family:monospace; color:var(--tp-muted); white-space:nowrap; width:40%">{{ freq }}</td>
+            <td>{{ desc }}</td>
+            <td style="text-align:right">
+              <span style="font-size:0.7rem; padding:2px 6px; border-radius:4px; background:{{ bg }}; color:{{ color }}; border:1px solid {{ color }}; font-weight:600">{{ label }}</span>
+            </td>
+          </tr>
+          {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- VHF/UHF -->
+<div class="row g-3">
+  <div class="col-12">
+    <h5 class="tp-section-title"><i class="fa-solid fa-radio me-2" style="color:var(--tp-accent2)"></i>VHF / UHF Bands</h5>
+  </div>
+
+  <div class="col-12 col-md-6">
+    <div class="tp-card p-0" style="overflow:hidden">
+      <div class="px-3 py-2 d-flex justify-content-between align-items-center"
+           style="background:rgba(0,212,170,0.07); border-bottom:1px solid var(--tp-border)">
+        <strong style="color:var(--tp-accent); font-size:1.05rem">2m</strong>
+        <span style="font-size:0.75rem; color:var(--tp-muted); font-family:monospace">144–148 MHz</span>
+      </div>
+      <table class="table tp-table mb-0" style="font-size:0.8rem">
+        <tbody>
+          <tr><td class="freq-cell">144.000–144.100</td><td>CW/EME</td><td style="text-align:right"><span style="font-size:0.7rem; padding:2px 6px; border-radius:4px; background:rgba(0,212,170,0.15); color:var(--tp-accent); border:1px solid var(--tp-accent); font-weight:600">CW</span></td></tr>
+          <tr><td class="freq-cell">144.100–144.275</td><td>SSB (calling: 144.200)</td><td style="text-align:right"><span style="font-size:0.7rem; padding:2px 6px; border-radius:4px; background:rgba(0,136,255,0.15); color:#4da6ff; border:1px solid #4da6ff; font-weight:600">SSB</span></td></tr>
+          <tr><td class="freq-cell">144.300–144.500</td><td>APRS, packet, digital</td><td style="text-align:right"><span style="font-size:0.7rem; padding:2px 6px; border-radius:4px; background:rgba(255,209,102,0.15); color:var(--tp-yellow); border:1px solid var(--tp-yellow); font-weight:600">DIG</span></td></tr>
+          <tr><td class="freq-cell">144.390</td><td>APRS (North America)</td><td style="text-align:right"><span style="font-size:0.7rem; padding:2px 6px; border-radius:4px; background:rgba(255,209,102,0.15); color:var(--tp-yellow); border:1px solid var(--tp-yellow); font-weight:600">DIG</span></td></tr>
+          <tr><td class="freq-cell">146.520</td><td>FM Simplex calling</td><td style="text-align:right"><span style="font-size:0.7rem; padding:2px 6px; border-radius:4px; background:rgba(255,107,107,0.15); color:var(--tp-red); border:1px solid var(--tp-red); font-weight:600">FM</span></td></tr>
+          <tr><td class="freq-cell">146.400–146.580</td><td>FM simplex</td><td style="text-align:right"><span style="font-size:0.7rem; padding:2px 6px; border-radius:4px; background:rgba(255,107,107,0.15); color:var(--tp-red); border:1px solid var(--tp-red); font-weight:600">FM</span></td></tr>
+          <tr><td class="freq-cell">146.610–147.390</td><td>FM repeaters (±600 kHz)</td><td style="text-align:right"><span style="font-size:0.7rem; padding:2px 6px; border-radius:4px; background:rgba(255,107,107,0.15); color:var(--tp-red); border:1px solid var(--tp-red); font-weight:600">FM</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-6">
+    <div class="tp-card p-0" style="overflow:hidden">
+      <div class="px-3 py-2 d-flex justify-content-between align-items-center"
+           style="background:rgba(0,212,170,0.07); border-bottom:1px solid var(--tp-border)">
+        <strong style="color:var(--tp-accent); font-size:1.05rem">70cm</strong>
+        <span style="font-size:0.75rem; color:var(--tp-muted); font-family:monospace">420–450 MHz</span>
+      </div>
+      <table class="table tp-table mb-0" style="font-size:0.8rem">
+        <tbody>
+          <tr><td class="freq-cell">432.000–432.100</td><td>CW/EME</td><td style="text-align:right"><span style="font-size:0.7rem; padding:2px 6px; border-radius:4px; background:rgba(0,212,170,0.15); color:var(--tp-accent); border:1px solid var(--tp-accent); font-weight:600">CW</span></td></tr>
+          <tr><td class="freq-cell">432.100</td><td>SSB calling frequency</td><td style="text-align:right"><span style="font-size:0.7rem; padding:2px 6px; border-radius:4px; background:rgba(0,136,255,0.15); color:#4da6ff; border:1px solid #4da6ff; font-weight:600">SSB</span></td></tr>
+          <tr><td class="freq-cell">432.300–432.400</td><td>Satellite downlinks</td><td style="text-align:right"><span style="font-size:0.7rem; padding:2px 6px; border-radius:4px; background:rgba(160,160,200,0.15); color:#aaa; border:1px solid #666; font-weight:600">BCN</span></td></tr>
+          <tr><td class="freq-cell">446.000</td><td>FM Simplex calling</td><td style="text-align:right"><span style="font-size:0.7rem; padding:2px 6px; border-radius:4px; background:rgba(255,107,107,0.15); color:var(--tp-red); border:1px solid var(--tp-red); font-weight:600">FM</span></td></tr>
+          <tr><td class="freq-cell">440.000–445.000</td><td>FM repeaters (+5 MHz)</td><td style="text-align:right"><span style="font-size:0.7rem; padding:2px 6px; border-radius:4px; background:rgba(255,107,107,0.15); color:var(--tp-red); border:1px solid var(--tp-red); font-weight:600">FM</span></td></tr>
+          <tr><td class="freq-cell">430–440 MHz</td><td>Packet / APRS</td><td style="text-align:right"><span style="font-size:0.7rem; padding:2px 6px; border-radius:4px; background:rgba(255,209,102,0.15); color:var(--tp-yellow); border:1px solid var(--tp-yellow); font-weight:600">DIG</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- FT8 / digital quick-ref -->
+  <div class="col-12">
+    <div class="tp-card">
+      <div class="tp-card-header mb-2"><i class="fa-solid fa-signal me-1"></i>FT8 / FT4 Frequencies (USB dial)</div>
+      <div class="d-flex flex-wrap gap-3" style="font-size:0.82rem; font-family:monospace">
+        {% set ft8 = [('160m','1.840'),('80m','3.573'),('60m','5.357'),('40m','7.074'),
+                      ('30m','10.136'),('20m','14.074'),('17m','18.100'),('15m','21.074'),
+                      ('12m','24.915'),('10m','28.074'),('6m','50.313')] %}
+        {% for band, freq in ft8 %}
+        <div style="background:rgba(255,209,102,0.07); border:1px solid rgba(255,209,102,0.2); border-radius:6px; padding:0.4rem 0.8rem">
+          <span style="color:var(--tp-yellow)">{{ band }}</span>
+          <span style="color:var(--tp-text)"> {{ freq }} MHz</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

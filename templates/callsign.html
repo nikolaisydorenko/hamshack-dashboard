@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Callsign Lookup{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-4">
+  <div class="col-12">
+    <h5 class="tp-section-title"><i class="fa-solid fa-id-card me-2"></i>Callsign Lookup</h5>
+  </div>
+</div>
+
+<div class="row g-4 justify-content-center">
+  <div class="col-12 col-md-6">
+    <div class="tp-card">
+      <div class="tp-card-header mb-3">Search Callsign</div>
+      <div class="input-group mb-3">
+        <input type="text" id="inputCall" class="form-control tp-form-control"
+               placeholder="e.g. W1AW" maxlength="12"
+               style="text-transform:uppercase; font-family:monospace; font-size:1.2rem; letter-spacing:2px"
+               oninput="this.value=this.value.toUpperCase()">
+        <button class="btn btn-tp" onclick="lookup()">
+          <i class="fa-solid fa-magnifying-glass me-1"></i>Look up
+        </button>
+      </div>
+      <div style="font-size:0.78rem; color:var(--tp-muted)">
+        <i class="fa-solid fa-circle-info me-1"></i>
+        Searches the HamDB database — covers US FCC and Canadian licensed amateurs.
+      </div>
+    </div>
+
+    <div id="resultCard" class="tp-card mt-3" style="display:none">
+      <div class="d-flex align-items-center gap-3 mb-3">
+        <div class="call-cell" id="resCall" style="font-size:2rem"></div>
+        <div>
+          <div id="resName" style="font-size:1rem; font-weight:600; color:#fff"></div>
+          <div id="resCountry" style="font-size:0.85rem; color:var(--tp-muted)"></div>
+        </div>
+        <span id="resClass" class="tp-badge tp-badge-good ms-auto" style="font-size:0.9rem"></span>
+      </div>
+      <div class="row g-2" style="font-size:0.85rem">
+        <div class="col-6">
+          <div class="tp-card-header" style="font-size:0.7rem">Grid Square</div>
+          <div id="resGrid" class="freq-cell"></div>
+        </div>
+        <div class="col-6">
+          <div class="tp-card-header" style="font-size:0.7rem">State / Province</div>
+          <div id="resState" style="color:var(--tp-text)"></div>
+        </div>
+        <div class="col-6">
+          <div class="tp-card-header" style="font-size:0.7rem">License Expires</div>
+          <div id="resExpires" style="color:var(--tp-text)"></div>
+        </div>
+        <div class="col-6">
+          <div class="tp-card-header" style="font-size:0.7rem">Email</div>
+          <div id="resEmail" style="color:var(--tp-text); word-break:break-all"></div>
+        </div>
+        <div class="col-12 mt-1">
+          <div class="tp-card-header" style="font-size:0.7rem">Address</div>
+          <div id="resAddr" style="color:var(--tp-muted); font-size:0.82rem"></div>
+        </div>
+      </div>
+      <div class="mt-3 d-flex gap-2">
+        <a id="qrzLink" href="#" target="_blank" class="btn btn-tp-outline btn-sm">
+          <i class="fa-solid fa-arrow-up-right-from-square me-1"></i>QRZ.com
+        </a>
+        <a id="aprsLink" href="#" target="_blank" class="btn btn-tp-outline btn-sm">
+          <i class="fa-solid fa-map-location-dot me-1"></i>aprs.fi
+        </a>
+      </div>
+    </div>
+
+    <div id="errorCard" class="tp-card mt-3" style="display:none; color:var(--tp-red)">
+      <i class="fa-solid fa-triangle-exclamation me-2"></i>
+      <span id="errorMsg"></span>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function lookup() {
+  const call = document.getElementById('inputCall').value.trim().toUpperCase();
+  if (!call) return;
+
+  document.getElementById('resultCard').style.display = 'none';
+  document.getElementById('errorCard').style.display = 'none';
+
+  fetch('/api/callsign?call=' + encodeURIComponent(call))
+    .then(r => r.json())
+    .then(d => {
+      if (d.error) {
+        document.getElementById('errorMsg').textContent = d.error;
+        document.getElementById('errorCard').style.display = 'block';
+        return;
+      }
+      document.getElementById('resCall').textContent    = d.call;
+      document.getElementById('resName').textContent    = d.name || '—';
+      document.getElementById('resCountry').textContent = d.country || '';
+      document.getElementById('resClass').textContent   = d.class || '?';
+      document.getElementById('resGrid').textContent    = d.grid || '—';
+      document.getElementById('resState').textContent   = d.state || '—';
+      document.getElementById('resExpires').textContent = d.expires || '—';
+      document.getElementById('resEmail').textContent   = d.email || '—';
+      document.getElementById('resAddr').textContent    = d.addr || '—';
+      document.getElementById('qrzLink').href  = `https://www.qrz.com/db/${d.call}`;
+      document.getElementById('aprsLink').href = `https://aprs.fi/${d.call}`;
+      document.getElementById('resultCard').style.display = 'block';
+    })
+    .catch(() => {
+      document.getElementById('errorMsg').textContent = 'Lookup failed. Try again.';
+      document.getElementById('errorCard').style.display = 'block';
+    });
+}
+
+document.getElementById('inputCall').addEventListener('keydown', e => {
+  if (e.key === 'Enter') lookup();
+});
+</script>
+{% endblock %}

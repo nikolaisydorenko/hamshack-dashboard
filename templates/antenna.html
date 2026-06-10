@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}Antenna Calculator{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-4">
+  <div class="col-12">
+    <h5 class="tp-section-title"><i class="fa-solid fa-wifi me-2"></i>Antenna Calculator</h5>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Input panel -->
+  <div class="col-12 col-md-5">
+    <div class="tp-card">
+      <div class="tp-card-header mb-3">Parameters</div>
+
+      <div class="mb-3">
+        <label class="tp-card-header d-block mb-1">Frequency (MHz)</label>
+        <input type="number" id="freqInput" class="form-control tp-form-control"
+               placeholder="e.g. 146.520" step="0.001" min="0.1" max="1300"
+               value="">
+      </div>
+
+      <div class="mb-3">
+        <label class="tp-card-header d-block mb-1">Antenna Type</label>
+        <select id="antennaType" class="form-select tp-form-control">
+          <option value="dipole">Half-wave dipole</option>
+          <option value="quarter">Quarter-wave vertical</option>
+          <option value="fiveeighths">5/8-wave vertical</option>
+          <option value="loop">Full-wave loop</option>
+          <option value="yagi3">Yagi (3-element, 2m)</option>
+        </select>
+      </div>
+
+      <div class="mb-4">
+        <label class="tp-card-header d-block mb-1">Velocity Factor: <span id="vfLabel">0.95</span></label>
+        <input type="range" class="form-range" id="vfSlider" min="0.80" max="1.00" step="0.01" value="0.95"
+               oninput="document.getElementById('vfLabel').textContent=parseFloat(this.value).toFixed(2); calculate()">
+        <div style="font-size:0.75rem; color:var(--tp-muted)">Bare wire ≈ 0.95 | Coax-loaded ≈ 0.82 | Free space = 1.00</div>
+      </div>
+
+      <button class="btn btn-tp w-100" onclick="calculate()">
+        <i class="fa-solid fa-calculator me-1"></i>Calculate
+      </button>
+    </div>
+
+    <!-- Band quick-select -->
+    <div class="tp-card mt-3">
+      <div class="tp-card-header mb-2">Quick-select centre frequency</div>
+      <div class="d-flex flex-wrap gap-2">
+        {% set bands = [
+          ('160m', 1.850), ('80m', 3.750), ('60m', 5.371),
+          ('40m', 7.150), ('30m', 10.125), ('20m', 14.225),
+          ('17m', 18.118), ('15m', 21.225), ('12m', 24.940),
+          ('10m', 28.500), ('6m', 50.125), ('2m', 146.520),
+          ('70cm', 446.000)
+        ] %}
+        {% for name, freq in bands %}
+        <button class="btn btn-tp-outline btn-sm" onclick="setFreq({{ freq }})">{{ name }}</button>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Results panel -->
+  <div class="col-12 col-md-7">
+    <div id="resultsDiv" class="tp-card" style="display:none">
+      <div class="tp-card-header mb-3" id="resultTitle"></div>
+
+      <div class="row g-3" id="resultRows"></div>
+
+      <div id="noteDiv" class="mt-3" style="font-size:0.8rem; color:var(--tp-muted); line-height:1.6; display:none"></div>
+    </div>
+
+    <div id="placeholderDiv" class="tp-card text-center" style="padding:3rem; color:var(--tp-muted)">
+      <i class="fa-solid fa-wifi" style="font-size:2.5rem; margin-bottom:1rem"></i>
+      <div>Enter a frequency and hit Calculate</div>
+    </div>
+
+    <!-- Reference card -->
+    <div class="tp-card mt-3">
+      <div class="tp-card-header mb-2">Formulas Reference</div>
+      <div style="font-size:0.82rem; font-family:monospace; color:var(--tp-text); line-height:2">
+        Half-wave dipole &nbsp;&nbsp;: L = <strong>143 × VF / f</strong> (total, m)<br>
+        Quarter-wave vert : L = <strong>71.5 × VF / f</strong> (m)<br>
+        5/8-wave vertical : L = <strong>190 × VF / f × 0.625</strong> (m)<br>
+        Full-wave loop &nbsp;&nbsp;&nbsp;: L = <strong>300 × VF / f</strong> (m)<br>
+        <span style="color:var(--tp-muted)">f in MHz · all lengths in metres · 1m = 3.281ft</span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function setFreq(f) {
+  document.getElementById('freqInput').value = f;
+  calculate();
+}
+
+function m2ft(m) { return (m * 3.28084).toFixed(2); }
+function fmtM(m) { return `${m.toFixed(2)} m <span style="color:var(--tp-muted)">(${m2ft(m)} ft)</span>`; }
+
+function row(label, value) {
+  return `<div class="col-12 col-sm-6">
+    <div style="background:var(--tp-bg2); border-radius:8px; padding:0.75rem 1rem">
+      <div class="tp-card-header" style="font-size:0.7rem; margin-bottom:0.25rem">${label}</div>
+      <div style="font-size:1rem; color:#fff; font-family:monospace">${value}</div>
+    </div>
+  </div>`;
+}
+
+function calculate() {
+  const f = parseFloat(document.getElementById('freqInput').value);
+  if (!f || f <= 0) return;
+  const type  = document.getElementById('antennaType').value;
+  const vf    = parseFloat(document.getElementById('vfSlider').value);
+  const c     = 300; // speed of light, m/us → MHz
+
+  let rows = [], title = '', note = '';
+
+  if (type === 'dipole') {
+    const total = (143 * vf) / f;
+    const leg   = total / 2;
+    title = `Half-wave Dipole @ ${f} MHz`;
+    rows  = [
+      row('Total length', fmtM(total)),
+      row('Each leg (½)', fmtM(leg)),
+    ];
+    note = 'Cut each leg equal length and feed at the centre with 50Ω coax. Add ≈ 5% for trimming. Use a balun for best results.';
+  } else if (type === 'quarter') {
+    const len = (71.5 * vf) / f;
+    title = `Quarter-wave Vertical @ ${f} MHz`;
+    rows  = [
+      row('Radiator length', fmtM(len)),
+      row('Radial length (×4)', fmtM(len)),
+    ];
+    note = 'Use 2–4 quarter-wave radials at ground level. Feed with 50Ω coax — no matching required.';
+  } else if (type === 'fiveeighths') {
+    const len    = (c * vf * 0.625) / f;
+    const radial = (71.5 * vf) / f;
+    title = `5/8-wave Vertical @ ${f} MHz`;
+    rows  = [
+      row('Radiator (5/8λ)', fmtM(len)),
+      row('Matching coil needed', '— LC network'),
+      row('Radial length (¼λ × 4)', fmtM(radial)),
+    ];
+    note = 'The 5/8λ has ~3 dBd gain over a dipole but requires a matching inductor at the base. Commonly used for 2m/70cm mobile.';
+  } else if (type === 'loop') {
+    const perim = (c * vf) / f;
+    const side  = perim / 4;
+    title = `Full-wave Loop @ ${f} MHz`;
+    rows  = [
+      row('Total perimeter', fmtM(perim)),
+      row('Side (square loop)', fmtM(side)),
+    ];
+    note = 'Can be fed at a corner (high-Z, needs a 4:1 balun) or at mid-side (50Ω, use 1:1 balun). Works well on multiple bands.';
+  } else if (type === 'yagi3') {
+    const wl     = (c * vf) / f;
+    const refl   = wl * 0.500;
+    const driven = wl * 0.478;
+    const dir    = wl * 0.451;
+    const spDE   = wl * 0.125;
+    const spDir  = wl * 0.125;
+    title = `3-element Yagi @ ${f} MHz`;
+    rows  = [
+      row('Reflector', fmtM(refl)),
+      row('Driven element', fmtM(driven)),
+      row('Director', fmtM(dir)),
+      row('Refl → Driven spacing', fmtM(spDE)),
+      row('Driven → Director spacing', fmtM(spDir)),
+    ];
+    note = 'Classic OWA-style proportions (~7 dBd gain, ~20 dB F/B). Tune driven element to resonance with an SWR meter and trim as needed.';
+  }
+
+  document.getElementById('resultTitle').textContent = title;
+  document.getElementById('resultRows').innerHTML = rows.join('');
+  document.getElementById('noteDiv').innerHTML = `<i class="fa-solid fa-circle-info me-1" style="color:var(--tp-accent2)"></i>${note}`;
+  document.getElementById('noteDiv').style.display = note ? 'block' : 'none';
+  document.getElementById('resultsDiv').style.display = 'block';
+  document.getElementById('placeholderDiv').style.display = 'none';
+}
+
+document.getElementById('freqInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') calculate();
+});
+document.getElementById('antennaType').addEventListener('change', () => {
+  if (document.getElementById('freqInput').value) calculate();
+});
+</script>
+{% endblock %}

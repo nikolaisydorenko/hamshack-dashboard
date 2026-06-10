@@ -58,6 +58,57 @@
   </div>
 </div>
 
+<!-- Weather widget -->
+<div class="row g-3 mb-4">
+  <div class="col-12">
+    <h5 class="tp-section-title"><i class="fa-solid fa-cloud-sun me-2"></i>Weather at QTH</h5>
+  </div>
+  <div class="col-12" id="weatherRow">
+    {% if settings.home_lat %}
+    <div class="tp-card" id="weatherCard" style="display:none">
+      <div class="row g-3 align-items-center">
+        <div class="col-auto text-center" style="min-width:90px">
+          <i id="wxIcon" class="fa-solid fa-cloud" style="font-size:2.8rem; color:var(--tp-accent)"></i>
+          <div id="wxCondition" style="font-size:0.78rem; color:var(--tp-muted); margin-top:0.3rem"></div>
+        </div>
+        <div class="col-auto">
+          <div id="wxTemp" style="font-size:2.4rem; font-weight:700; color:#fff; line-height:1"></div>
+          <div id="wxFeels" style="font-size:0.82rem; color:var(--tp-muted)"></div>
+        </div>
+        <div class="col">
+          <div class="row g-2" style="font-size:0.85rem">
+            <div class="col-6 col-sm-4">
+              <div style="color:var(--tp-muted); font-size:0.72rem; text-transform:uppercase; letter-spacing:1px">Humidity</div>
+              <div id="wxHumidity" style="color:#fff"></div>
+            </div>
+            <div class="col-6 col-sm-4">
+              <div style="color:var(--tp-muted); font-size:0.72rem; text-transform:uppercase; letter-spacing:1px">Wind</div>
+              <div id="wxWind" style="color:#fff"></div>
+            </div>
+            <div class="col-6 col-sm-4">
+              <div style="color:var(--tp-muted); font-size:0.72rem; text-transform:uppercase; letter-spacing:1px">Precip</div>
+              <div id="wxPrecip" style="color:#fff"></div>
+            </div>
+          </div>
+        </div>
+        <div class="col-auto text-end" style="font-size:0.75rem; color:var(--tp-muted)">
+          <div id="wxLocation"></div>
+          <div id="wxTime"></div>
+        </div>
+      </div>
+    </div>
+    <div id="weatherError" style="display:none; font-size:0.85rem; color:var(--tp-muted); padding:0.5rem 0">
+      <i class="fa-solid fa-triangle-exclamation me-1 text-warning"></i>Weather unavailable.
+    </div>
+    {% else %}
+    <div class="tp-card" style="color:var(--tp-muted); font-size:0.85rem; padding:1rem">
+      <i class="fa-solid fa-cloud-sun me-2"></i>
+      <a href="/settings" style="color:var(--tp-accent)">Set your home QTH</a> to see local weather.
+    </div>
+    {% endif %}
+  </div>
+</div>
+
 <!-- Quick links -->
 <div class="row g-3 mb-4">
   <div class="col-12">
@@ -118,6 +169,26 @@
 
 {% block scripts %}
 <script>
+  {% if settings.home_lat %}
+  fetch('/api/weather').then(r => r.json()).then(d => {
+    if (d.error) { document.getElementById('weatherError').style.display='block'; return; }
+    const iconColors = { green:'var(--tp-green)', yellow:'var(--tp-yellow)', blue:'#4da6ff',
+                         muted:'var(--tp-muted)', white:'#cce5ff', red:'var(--tp-red)' };
+    const el = id => document.getElementById(id);
+    el('wxIcon').className = `fa-solid ${d.icon}`;
+    el('wxIcon').style.color = iconColors[d.icon_color] || 'var(--tp-accent)';
+    el('wxCondition').textContent = d.condition || '';
+    el('wxTemp').textContent = d.temp != null ? `${Math.round(d.temp)}°C` : '—';
+    el('wxFeels').textContent = d.feels_like != null ? `Feels like ${Math.round(d.feels_like)}°C` : '';
+    el('wxHumidity').textContent = d.humidity != null ? `${d.humidity}%` : '—';
+    el('wxWind').textContent = d.wind_kmh != null ? `${Math.round(d.wind_kmh)} km/h ${d.wind_dir||''}` : '—';
+    el('wxPrecip').textContent = d.precip != null ? `${d.precip} mm` : '0 mm';
+    el('wxLocation').textContent = d.location || '';
+    if (d.time) el('wxTime').textContent = d.time.replace('T',' ').slice(0,16) + ' local';
+    el('weatherCard').style.display = 'block';
+  }).catch(() => { document.getElementById('weatherError').style.display='block'; });
+  {% endif %}
+
   fetch('/api/solar').then(r => r.json()).then(d => {
     if (d.sfi != null) {
       document.getElementById('dashSfi').textContent = d.sfi;
