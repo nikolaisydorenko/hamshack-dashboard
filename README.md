@@ -2,7 +2,8 @@
 
 A self-hosted web dashboard for amateur radio operators. Built with Flask and SQLite — runs on a Raspberry Pi, a home server, or a Proxmox LXC container. No cloud account required.
 
-**Live demo:** *(self-hosted — clone and run your own)*
+**Live demo:** [nikolaisydorenko.github.io/hamshack-dashboard](https://nikolaisydorenko.github.io/hamshack-dashboard/)
+> The live demo runs entirely in your browser — no backend needed. For the full experience (contact log, repeater import, CHIRP export) run it self-hosted.
 
 ---
 
