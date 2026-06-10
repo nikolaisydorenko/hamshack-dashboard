@@ -64,6 +64,9 @@
           <button class="btn btn-tp-outline" id="chirpBtn" onclick="exportChirp()" style="display:none" title="Export CHIRP CSV">
             <i class="fa-solid fa-file-arrow-down"></i>
           </button>
+          <button class="btn btn-tp-outline" onclick="openAddModal()" title="Add custom repeater">
+            <i class="fa-solid fa-plus"></i>
+          </button>
         </div>
 
       </div>
@@ -88,6 +91,76 @@
       </a>
     </div>
     {% endif %}
+  </div>
+</div>
+<!-- Add Repeater Modal -->
+<div class="modal fade" id="addRepeaterModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content" style="background:var(--tp-card); border:1px solid var(--tp-border)">
+      <div class="modal-header" style="border-bottom:1px solid var(--tp-border)">
+        <h5 class="modal-title" style="color:#fff"><i class="fa-solid fa-plus me-2"></i>Add Custom Repeater</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-6">
+            <label class="tp-card-header d-block mb-1">Callsign</label>
+            <input type="text" id="addCallsign" class="form-control tp-form-control"
+                   placeholder="e.g. VA3GTU" style="text-transform:uppercase; font-family:monospace"
+                   oninput="this.value=this.value.toUpperCase()">
+          </div>
+          <div class="col-6">
+            <label class="tp-card-header d-block mb-1">Mode</label>
+            <select id="addMode" class="form-select tp-form-control">
+              <option>FM</option><option>DMR</option><option>P25</option>
+              <option>Fusion/YSF</option><option>D-STAR</option><option>NXDN</option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="tp-card-header d-block mb-1">Output Freq (MHz) *</label>
+            <input type="number" id="addFreq" class="form-control tp-form-control"
+                   placeholder="442.800" step="0.0001" required>
+          </div>
+          <div class="col-6">
+            <label class="tp-card-header d-block mb-1">Offset (MHz)</label>
+            <input type="number" id="addOffset" class="form-control tp-form-control"
+                   placeholder="+5.000" step="0.0001" value="5">
+          </div>
+          <div class="col-6">
+            <label class="tp-card-header d-block mb-1">CTCSS / Tone (Hz)</label>
+            <input type="text" id="addCTCSS" class="form-control tp-form-control"
+                   placeholder="103.5">
+          </div>
+          <div class="col-6">
+            <label class="tp-card-header d-block mb-1">City</label>
+            <input type="text" id="addCity" class="form-control tp-form-control"
+                   placeholder="Etobicoke, ON">
+          </div>
+          <div class="col-6">
+            <label class="tp-card-header d-block mb-1">Latitude *</label>
+            <input type="number" id="addLat" class="form-control tp-form-control"
+                   placeholder="43.6440" step="0.0001">
+          </div>
+          <div class="col-6">
+            <label class="tp-card-header d-block mb-1">Longitude *</label>
+            <input type="number" id="addLon" class="form-control tp-form-control"
+                   placeholder="-79.5295" step="0.0001">
+          </div>
+          <div class="col-12">
+            <button class="btn btn-tp-outline btn-sm" onclick="useCurrentLocation()">
+              <i class="fa-solid fa-location-crosshairs me-1"></i>Use my QTH coords
+            </button>
+          </div>
+        </div>
+        <div id="addMsg" class="mt-2" style="font-size:0.85rem; display:none"></div>
+      </div>
+      <div class="modal-footer" style="border-top:1px solid var(--tp-border)">
+        <button type="button" class="btn btn-tp-outline" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-tp" onclick="saveRepeater()">
+          <i class="fa-solid fa-floppy-disk me-1"></i>Save
+        </button>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}
@@ -158,14 +231,20 @@ function renderTable(data, total) {
     const offStr = r.offset_mhz > 0 ? `+${r.offset_mhz.toFixed(3)}`
                  : r.offset_mhz < 0 ? `${r.offset_mhz.toFixed(3)}` : '0.000';
     const ctcss = r.ctcss && parseFloat(r.ctcss) > 0 ? r.ctcss + ' Hz' : '—';
+    const localBadge = r.source === 'local'
+      ? `<span style="font-size:0.65rem;padding:1px 5px;border-radius:3px;background:rgba(0,212,170,0.15);color:var(--tp-accent);border:1px solid var(--tp-accent);margin-left:4px">LOCAL</span>`
+      : '';
+    const delBtn = r.source === 'local'
+      ? `<button class="btn btn-sm" style="padding:0 4px;color:var(--tp-red);background:none;border:none;font-size:0.8rem" onclick="deleteRepeater(${r.custom_id})" title="Remove"><i class="fa-solid fa-trash"></i></button>`
+      : '';
     return `<tr>
-      <td class="call-cell">${r.callsign || '—'}</td>
+      <td class="call-cell">${r.callsign || '—'}${localBadge}</td>
       <td class="freq-cell">${r.frequency.toFixed(4)} MHz</td>
       <td class="offset-cell">${offStr} MHz</td>
       <td style="font-family:monospace;font-size:0.85rem">${ctcss}</td>
       <td style="font-size:0.85rem">${r.mode || 'FM'}</td>
       <td style="font-size:0.82rem;color:var(--tp-muted)">${r.city || '—'}</td>
-      <td style="font-family:monospace;font-size:0.82rem;color:var(--tp-muted)">${r.distance} km</td>
+      <td style="font-family:monospace;font-size:0.82rem;color:var(--tp-muted)">${r.distance} km${delBtn}</td>
     </tr>`;
   }).join('');
 
@@ -193,6 +272,57 @@ function exportChirp() {
 document.getElementById('locationInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') geocodeSearch();
 });
+
+// ── Custom repeater modal ────────────────────────────────────────────────────
+let addModal;
+function openAddModal() {
+  if (!addModal) addModal = new bootstrap.Modal(document.getElementById('addRepeaterModal'));
+  document.getElementById('addMsg').style.display = 'none';
+  addModal.show();
+}
+
+function useCurrentLocation() {
+  document.getElementById('addLat').value = searchLat || '{{ settings.home_lat or "" }}';
+  document.getElementById('addLon').value = searchLon || '{{ settings.home_lon or "" }}';
+}
+
+function saveRepeater() {
+  const freq = parseFloat(document.getElementById('addFreq').value);
+  const lat  = parseFloat(document.getElementById('addLat').value);
+  const lon  = parseFloat(document.getElementById('addLon').value);
+  if (isNaN(freq)) { showAddMsg('Frequency is required.', 'var(--tp-red)'); return; }
+  if (isNaN(lat) || isNaN(lon)) { showAddMsg('Latitude and longitude are required.', 'var(--tp-red)'); return; }
+
+  fetch('/api/custom_repeaters', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      callsign: document.getElementById('addCallsign').value.trim(),
+      frequency: freq,
+      offset_mhz: parseFloat(document.getElementById('addOffset').value) || 0,
+      ctcss: document.getElementById('addCTCSS').value.trim(),
+      mode: document.getElementById('addMode').value,
+      city: document.getElementById('addCity').value.trim(),
+      lat, lon,
+    })
+  }).then(r => r.json()).then(d => {
+    if (d.status === 'ok') {
+      showAddMsg('Saved!', 'var(--tp-green)');
+      setTimeout(() => { addModal.hide(); searchRepeaters(); }, 700);
+    }
+  }).catch(() => showAddMsg('Save failed.', 'var(--tp-red)'));
+}
+
+function deleteRepeater(id) {
+  if (!confirm('Remove this local repeater?')) return;
+  fetch(`/api/custom_repeaters/${id}`, {method: 'DELETE'})
+    .then(() => searchRepeaters());
+}
+
+function showAddMsg(msg, color) {
+  const el = document.getElementById('addMsg');
+  el.textContent = msg; el.style.color = color; el.style.display = 'block';
+}
 
 // Auto-search if home QTH is configured
 {% if settings.home_lat %}

@@ -48,6 +48,27 @@ def init_db():
         rst_sent TEXT, rst_recv TEXT, notes TEXT)""")
     conn.execute("""CREATE TABLE IF NOT EXISTS settings (
         key TEXT PRIMARY KEY, value TEXT)""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS custom_repeaters (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        callsign TEXT, frequency REAL NOT NULL,
+        offset_mhz REAL DEFAULT 0, ctcss TEXT DEFAULT '',
+        mode TEXT DEFAULT 'FM', city TEXT DEFAULT '',
+        notes TEXT DEFAULT '',
+        lat REAL, lon REAL)""")
+    conn.commit()
+    conn.close()
+
+
+def migrate_db():
+    """Add tables/columns that may be missing from an existing DB."""
+    conn = get_db()
+    conn.execute("""CREATE TABLE IF NOT EXISTS custom_repeaters (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        callsign TEXT, frequency REAL NOT NULL,
+        offset_mhz REAL DEFAULT 0, ctcss TEXT DEFAULT '',
+        mode TEXT DEFAULT 'FM', city TEXT DEFAULT '',
+        notes TEXT DEFAULT '',
+        lat REAL, lon REAL)""")
     conn.commit()
     conn.close()
 
@@ -88,6 +109,8 @@ def fetch_hearham():
 def wind_dir(deg):
     return WIND_DIRS[round(deg / 22.5) % 16]
 
+
+migrate_db()  # safe to run every startup — only creates missing tables
 
 # ── Pages ──────────────────────────────────────────────────────────────────────
 
@@ -216,10 +239,41 @@ def api_repeaters():
                 "callsign": r.get("callsign",""), "frequency": round(freq_mhz,4),
                 "offset_hz": off_hz, "offset_mhz": round(off_hz/1e6,3),
                 "ctcss": r.get("encode") or "", "mode": r.get("mode","FM"),
-                "city": r.get("city",""), "distance": round(d,1),
+                "city": r.get("city",""), "distance": round(d,1), "source": "HearHam",
             })
         except Exception:
             continue
+
+    # Merge custom repeaters from local DB
+    try:
+        conn = get_db()
+        custom = conn.execute("SELECT * FROM custom_repeaters").fetchall()
+        conn.close()
+        for r in custom:
+            try:
+                if r["lat"] is None or r["lon"] is None:
+                    continue
+                d = haversine(lat, lon, r["lat"], r["lon"])
+                if d > dist_km:
+                    continue
+                freq_mhz = float(r["frequency"])
+                if band == "2m" and not (144 <= freq_mhz <= 148): continue
+                if band == "70cm" and not (420 <= freq_mhz <= 450): continue
+                if band == "6m" and not (50 <= freq_mhz <= 54): continue
+                if band == "10m" and not (28 <= freq_mhz <= 30): continue
+                results.append({
+                    "callsign": r["callsign"] or "", "frequency": round(freq_mhz, 4),
+                    "offset_hz": int(float(r["offset_mhz"]) * 1e6),
+                    "offset_mhz": float(r["offset_mhz"]),
+                    "ctcss": r["ctcss"] or "", "mode": r["mode"] or "FM",
+                    "city": r["city"] or "", "distance": round(d, 1),
+                    "source": "local", "custom_id": r["id"],
+                })
+            except Exception:
+                continue
+    except Exception:
+        pass
+
     results.sort(key=lambda x: x["distance"])
     return jsonify({"count": len(results), "results": results[:200]})
 
@@ -399,6 +453,41 @@ def api_callsign():
     except Exception:
         pass
     return jsonify({"error": "Callsign not found"}), 404
+
+@app.route("/api/custom_repeaters", methods=["GET"])
+def api_custom_repeaters_list():
+    conn = get_db()
+    rows = conn.execute("SELECT * FROM custom_repeaters ORDER BY callsign").fetchall()
+    conn.close()
+    return jsonify([dict(r) for r in rows])
+
+@app.route("/api/custom_repeaters", methods=["POST"])
+def api_custom_repeaters_add():
+    data = request.json or {}
+    try:
+        freq = float(data["frequency"])
+    except (KeyError, ValueError):
+        return jsonify({"error": "frequency required"}), 400
+    conn = get_db()
+    cur = conn.execute(
+        "INSERT INTO custom_repeaters (callsign,frequency,offset_mhz,ctcss,mode,city,notes,lat,lon) VALUES (?,?,?,?,?,?,?,?,?)",
+        (data.get("callsign","").upper().strip(), freq,
+         float(data.get("offset_mhz", 0)), data.get("ctcss",""),
+         data.get("mode","FM"), data.get("city",""), data.get("notes",""),
+         data.get("lat"), data.get("lon"))
+    )
+    conn.commit()
+    new_id = cur.lastrowid
+    conn.close()
+    return jsonify({"status": "ok", "id": new_id})
+
+@app.route("/api/custom_repeaters/<int:rid>", methods=["DELETE"])
+def api_custom_repeaters_delete(rid):
+    conn = get_db()
+    conn.execute("DELETE FROM custom_repeaters WHERE id = ?", (rid,))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "ok"})
 
 @app.route("/api/dx")
 def api_dx():
