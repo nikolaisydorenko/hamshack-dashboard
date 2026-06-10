@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% block title %}HF Propagation{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-12">
+    <h5 class="tp-section-title"><i class="fa-solid fa-sun me-2"></i>HF Propagation — Solar Conditions</h5>
+  </div>
+</div>
+
+<!-- Solar metric cards -->
+<div class="row g-3 mb-4" id="solarCards">
+  {% for key, label, unit, id in [
+    ('sfi','Solar Flux Index','SFI','sfiVal'),
+    ('ssn','Sunspot Number','SSN','ssnVal'),
+    ('kindex','K-Index','Kp','kindexVal'),
+    ('aindex','A-Index','Ap','aindexVal'),
+    ('wind','Solar Wind','km/s','windVal'),
+    ('xray','X-Ray Class','flare','xrayVal'),
+  ] %}
+  <div class="col-6 col-md-2">
+    <div class="solar-card" id="card_{{ id }}">
+      <div class="solar-label mb-1">{{ label }}</div>
+      <div class="solar-val" id="{{ id }}" style="color:var(--tp-accent)">—</div>
+      <div class="solar-label mt-1">{{ unit }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Band conditions -->
+<div class="row g-3 mb-4">
+  <div class="col-12">
+    <div class="tp-card">
+      <div class="tp-section-title"><i class="fa-solid fa-signal me-2"></i>Band Conditions (estimated)</div>
+      <div class="row g-2" id="bandConditions">
+        {% for band in ['160m','80m','40m','30m','20m','17m','15m','12m','10m','6m'] %}
+        <div class="col-4 col-md-1 text-center">
+          <div style="font-family:monospace; font-size:0.9rem; color:#fff; font-weight:600">{{ band }}</div>
+          <div class="band-dot mx-auto mt-1" id="band_{{ band }}" style="background:var(--tp-muted); width:18px;height:18px;border-radius:50%"></div>
+          <div style="font-size:0.65rem; color:var(--tp-muted); margin-top:3px" id="band_{{ band }}_lbl">—</div>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="mt-3 d-flex gap-3" style="font-size:0.75rem; color:var(--tp-muted)">
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--tp-green)"></span> Good</span>
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--tp-yellow)"></span> Fair</span>
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--tp-red)"></span> Poor</span>
+        <span style="margin-left:auto; font-style:italic">Based on SFI + K-index estimates</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MUF estimates -->
+<div class="row g-3 mb-4">
+  <div class="col-12">
+    <div class="tp-card">
+      <div class="tp-section-title"><i class="fa-solid fa-arrow-trend-up me-2"></i>MUF Estimates — from Etobicoke</div>
+      <div class="row g-3" id="mufEstimates">
+        <div class="col-12 text-center" style="color:var(--tp-muted); padding:1.5rem">
+          <div class="tp-spinner mx-auto mb-2"></div>
+          Loading solar data…
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Links -->
+<div class="row g-3">
+  <div class="col-12">
+    <div class="tp-card">
+      <div class="tp-section-title"><i class="fa-solid fa-link me-2"></i>External Propagation Tools</div>
+      <div class="row g-2">
+        {% set ext_links = [
+          ('https://www.swpc.noaa.gov/','NOAA Space Weather','fa-cloud-sun','Live solar & geomagnetic alerts'),
+          ('https://pskreporter.info/pskmap.html','PSKReporter','fa-map','Live decoded signals worldwide'),
+          ('https://www.dxmaps.com/spots/map.php','DXMaps','fa-globe','Real-time propagation spots'),
+          ('https://www.voacap.com/hf/','VOACAP Online','fa-chart-line','Point-to-point MUF/propagation prediction'),
+          ('https://www.hamqsl.com/solar.html','HamQSL Solar','fa-sun','Quick solar widget & band summary'),
+          ('https://www.dxwatch.com/','DXWatch','fa-tower-broadcast','DX cluster spots'),
+        ] %}
+        {% for url, name, icon, desc in ext_links %}
+        <div class="col-6 col-md-4">
+          <a href="{{ url }}" target="_blank" class="text-decoration-none">
+            <div class="d-flex align-items-start gap-2 p-2" style="border:1px solid var(--tp-border); border-radius:8px; transition:border-color 0.2s"
+                 onmouseover="this.style.borderColor='var(--tp-accent)'" onmouseout="this.style.borderColor='var(--tp-border)'">
+              <i class="fa-solid {{ icon }} mt-1" style="color:var(--tp-accent2); min-width:16px"></i>
+              <div>
+                <div style="color:#fff; font-size:0.85rem; font-weight:600">{{ name }} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.65rem; color:var(--tp-muted)"></i></div>
+                <div style="font-size:0.75rem; color:var(--tp-muted)">{{ desc }}</div>
+              </div>
+            </div>
+          </a>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Band condition thresholds
+function getBandCondition(band, sfi, kp) {
+  const freqs = {
+    '160m': 1.8, '80m': 3.5, '40m': 7, '30m': 10,
+    '20m': 14,   '17m': 18,  '15m': 21,'12m': 24,
+    '10m': 28,   '6m': 50
+  };
+  const mhz = freqs[band];
+  // Very simplified MUF/band condition model
+  const muf = sfi > 0 ? 1.6 + (sfi - 65) * 0.18 : 10;
+  const geoFactor = kp <= 2 ? 1.0 : kp <= 4 ? 0.7 : 0.3;
+
+  let score; // 0=poor, 1=fair, 2=good
+  if (mhz <= 3.5) {
+    // Low bands — hurt by geo storms, generally open at night
+    score = geoFactor > 0.8 ? 2 : geoFactor > 0.5 ? 1 : 0;
+  } else if (mhz <= 7) {
+    score = geoFactor > 0.6 ? 2 : geoFactor > 0.3 ? 1 : 0;
+  } else if (mhz <= 14) {
+    // 20m is the workhorse
+    score = (sfi > 80 && geoFactor > 0.5) ? 2 : (sfi > 65 && geoFactor > 0.3) ? 1 : 0;
+  } else if (mhz <= 21) {
+    score = (sfi > 110 && geoFactor > 0.5) ? 2 : (sfi > 90 && geoFactor > 0.3) ? 1 : 0;
+  } else if (mhz <= 28) {
+    score = (sfi > 140 && geoFactor > 0.6) ? 2 : (sfi > 120 && geoFactor > 0.4) ? 1 : 0;
+  } else {
+    // 6m — sporadic E, hard to model; show fair if SFI very high
+    score = sfi > 180 ? 1 : 0;
+  }
+
+  return score;
+}
+
+function mufFromSfi(sfi) {
+  // Rough global MUF estimate from SFI
+  return Math.min(50, Math.max(5, 1.6 + (sfi - 65) * 0.18));
+}
+
+const MUF_PATHS = [
+  { label: 'Etobicoke → Europe (UK)', icon: 'fa-tower-broadcast' },
+  { label: 'Etobicoke → Japan',       icon: 'fa-torii-gate' },
+  { label: 'Etobicoke → S. America',  icon: 'fa-globe-americas' },
+  { label: 'Etobicoke → W. Coast US', icon: 'fa-mountain' },
+];
+
+function renderBands(sfi, kp) {
+  const bands = ['160m','80m','40m','30m','20m','17m','15m','12m','10m','6m'];
+  const colors = ['var(--tp-red)','var(--tp-yellow)','var(--tp-green)'];
+  const labels = ['Poor','Fair','Good'];
+  bands.forEach(b => {
+    const s = getBandCondition(b, sfi, kp);
+    document.getElementById('band_' + b).style.background = colors[s];
+    document.getElementById('band_' + b + '_lbl').textContent = labels[s];
+    document.getElementById('band_' + b + '_lbl').style.color =
+      s === 2 ? 'var(--tp-green)' : s === 1 ? 'var(--tp-yellow)' : 'var(--tp-red)';
+  });
+}
+
+function renderMuf(sfi) {
+  const muf = mufFromSfi(sfi);
+  const pathFactors = [1.0, 0.85, 1.05, 0.95]; // relative to base MUF
+  const el = document.getElementById('mufEstimates');
+  el.innerHTML = MUF_PATHS.map((p, i) => {
+    const pmuf = (muf * pathFactors[i]).toFixed(1);
+    const pct = Math.min(100, (pmuf / 50) * 100);
+    const color = pmuf > 21 ? 'var(--tp-green)' : pmuf > 10 ? 'var(--tp-yellow)' : 'var(--tp-red)';
+    return `<div class="col-12 col-md-6">
+      <div style="border:1px solid var(--tp-border); border-radius:8px; padding:0.75rem 1rem">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <span style="font-size:0.85rem"><i class="fa-solid ${p.icon} me-2" style="color:var(--tp-accent2)"></i>${p.label}</span>
+          <span style="font-family:monospace; font-size:1.1rem; font-weight:700; color:${color}">${pmuf} MHz</span>
+        </div>
+        <div style="background:var(--tp-border); border-radius:4px; height:6px">
+          <div style="background:${color}; width:${pct}%; height:6px; border-radius:4px; transition:width 0.8s"></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+fetch('/api/solar').then(r => r.json()).then(d => {
+  let sfi = 0, kp = 0;
+
+  if (d.sfi != null) {
+    sfi = parseFloat(d.sfi);
+    document.getElementById('sfiVal').textContent = sfi;
+    const c = sfi > 150 ? 'var(--tp-green)' : sfi > 100 ? 'var(--tp-yellow)' : 'var(--tp-red)';
+    document.getElementById('sfiVal').style.color = c;
+  }
+
+  if (d.kp != null) {
+    kp = parseFloat(d.kp);
+    document.getElementById('kindexVal').textContent = kp.toFixed(2);
+    const c = kp <= 2 ? 'var(--tp-green)' : kp <= 4 ? 'var(--tp-yellow)' : 'var(--tp-red)';
+    document.getElementById('kindexVal').style.color = c;
+    document.getElementById('card_kindexVal').style.borderColor = c;
+  }
+
+  if (d.ap != null) {
+    document.getElementById('aindexVal').textContent = d.ap;
+  }
+
+  if (d.ssn != null) {
+    document.getElementById('ssnVal').textContent = d.ssn;
+  }
+
+  if (d.wind_speed != null) {
+    document.getElementById('windVal').textContent = d.wind_speed;
+    const c = d.wind_speed > 600 ? 'var(--tp-red)' : d.wind_speed > 400 ? 'var(--tp-yellow)' : 'var(--tp-green)';
+    document.getElementById('windVal').style.color = c;
+  }
+
+  // X-ray not available from current endpoints — show N/A
+  document.getElementById('xrayVal').textContent = 'N/A';
+  document.getElementById('xrayVal').style.color = 'var(--tp-muted)';
+
+  if (sfi > 0) {
+    renderBands(sfi, kp);
+    renderMuf(sfi);
+  }
+}).catch(() => {
+  document.getElementById('mufEstimates').innerHTML =
+    '<div class="col-12 text-center" style="color:var(--tp-red)">Could not load solar data.</div>';
+});
+</script>
+{% endblock %}

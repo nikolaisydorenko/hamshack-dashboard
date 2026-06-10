@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block title %}Contact Log{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-12">
+    <h5 class="tp-section-title"><i class="fa-solid fa-book me-2"></i>Contact Log — VA3CZT</h5>
+  </div>
+</div>
+
+<!-- Log form -->
+<div class="row g-3 mb-4">
+  <div class="col-12">
+    <div class="tp-card">
+      <div class="tp-card-header mb-2">Log New QSO</div>
+      <div class="row g-2">
+        <div class="col-12 col-md-2">
+          <label class="tp-card-header d-block">Callsign *</label>
+          <input type="text" id="fCall" class="form-control tp-form-control" placeholder="VE3ABC"
+                 style="text-transform:uppercase" onInput="this.value=this.value.toUpperCase()">
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="tp-card-header d-block">Frequency (MHz)</label>
+          <input type="number" id="fFreq" class="form-control tp-form-control" placeholder="147.120" step="0.001">
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="tp-card-header d-block">Band</label>
+          <select id="fBand" class="form-select tp-form-control">
+            <option value="">—</option>
+            <option>2m</option><option>70cm</option>
+            <option>6m</option><option>10m</option>
+            <option>15m</option><option>17m</option>
+            <option>20m</option><option>30m</option>
+            <option>40m</option><option>80m</option>
+            <option>160m</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-1">
+          <label class="tp-card-header d-block">Mode</label>
+          <select id="fMode" class="form-select tp-form-control">
+            <option>FM</option><option>SSB</option><option>AM</option>
+            <option>CW</option><option>FT8</option><option>DMR</option>
+            <option>C4FM</option>
+          </select>
+        </div>
+        <div class="col-3 col-md-1">
+          <label class="tp-card-header d-block">RST Sent</label>
+          <input type="text" id="fRstS" class="form-control tp-form-control" value="59" maxlength="3">
+        </div>
+        <div class="col-3 col-md-1">
+          <label class="tp-card-header d-block">RST Rcvd</label>
+          <input type="text" id="fRstR" class="form-control tp-form-control" value="59" maxlength="3">
+        </div>
+        <div class="col-12 col-md-2">
+          <label class="tp-card-header d-block">Notes</label>
+          <input type="text" id="fNotes" class="form-control tp-form-control" placeholder="Optional">
+        </div>
+        <div class="col-12 col-md-1 d-flex align-items-end">
+          <button class="btn btn-tp w-100" onclick="submitLog()">
+            <i class="fa-solid fa-plus me-1"></i>Log
+          </button>
+        </div>
+      </div>
+      <div id="logMsg" class="mt-2" style="font-size:0.82rem; display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Export buttons -->
+<div class="row g-2 mb-3">
+  <div class="col-auto">
+    <a href="/api/log/export/adif" class="btn btn-tp-outline btn-sm">
+      <i class="fa-solid fa-file-arrow-down me-1"></i>Export ADIF
+    </a>
+  </div>
+  <div class="col-auto ms-auto">
+    <span id="totalContacts" style="font-size:0.82rem; color:var(--tp-muted)">
+      {{ contacts|length }} contact(s)
+    </span>
+  </div>
+</div>
+
+<!-- Log table -->
+<div class="tp-card p-0" style="overflow:auto">
+  <table class="table tp-table mb-0" id="logTable">
+    <thead><tr>
+      <th>Date/Time (UTC)</th>
+      <th>Callsign</th>
+      <th>Frequency</th>
+      <th>Band</th>
+      <th>Mode</th>
+      <th>RST S/R</th>
+      <th>Notes</th>
+      <th></th>
+    </tr></thead>
+    <tbody id="logBody">
+      {% for c in contacts %}
+      <tr id="row_{{ c.id }}">
+        <td style="font-size:0.82rem; color:var(--tp-muted); white-space:nowrap">
+          {{ c.datetime[:16].replace('T',' ') }}
+        </td>
+        <td class="call-cell">{{ c.callsign }}</td>
+        <td class="freq-cell">{{ "%.4f"|format(c.frequency) if c.frequency else "—" }}</td>
+        <td><span class="tp-badge tp-badge-fair">{{ c.band or '—' }}</span></td>
+        <td><span class="tp-badge tp-badge-good">{{ c.mode or '—' }}</span></td>
+        <td style="font-family:monospace; font-size:0.85rem">{{ c.rst_sent }}/{{ c.rst_recv }}</td>
+        <td style="font-size:0.82rem; color:var(--tp-muted)">{{ c.notes or '' }}</td>
+        <td>
+          <button class="btn btn-sm" style="color:var(--tp-red); background:none; border:none; padding:0 4px"
+                  onclick="deleteContact({{ c.id }})">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+      {% if not contacts %}
+      <tr id="emptyRow"><td colspan="8" class="text-center" style="color:var(--tp-muted); padding:2rem">
+        No contacts yet. Log your first QSO above.
+      </td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function submitLog() {
+  const callsign = document.getElementById('fCall').value.trim().toUpperCase();
+  if (!callsign) {
+    showMsg('Callsign is required.', 'var(--tp-red)');
+    return;
+  }
+
+  const payload = {
+    callsign,
+    frequency: parseFloat(document.getElementById('fFreq').value) || null,
+    band:      document.getElementById('fBand').value,
+    mode:      document.getElementById('fMode').value,
+    rst_sent:  document.getElementById('fRstS').value || '59',
+    rst_recv:  document.getElementById('fRstR').value || '59',
+    notes:     document.getElementById('fNotes').value,
+  };
+
+  fetch('/api/log', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  }).then(r => r.json()).then(d => {
+    if (d.status === 'ok') {
+      showMsg('Contact logged!', 'var(--tp-green)');
+      prependRow(d.id, payload);
+      document.getElementById('fCall').value = '';
+      document.getElementById('fFreq').value = '';
+      document.getElementById('fNotes').value = '';
+    }
+  }).catch(e => showMsg('Error: ' + e.message, 'var(--tp-red)'));
+}
+
+function prependRow(id, c) {
+  const empty = document.getElementById('emptyRow');
+  if (empty) empty.remove();
+
+  const dt = new Date().toISOString().slice(0,16).replace('T',' ');
+  const freq = c.frequency ? c.frequency.toFixed(4) : '—';
+  const row = `<tr id="row_${id}">
+    <td style="font-size:0.82rem; color:var(--tp-muted)">${dt}</td>
+    <td class="call-cell">${c.callsign}</td>
+    <td class="freq-cell">${freq}</td>
+    <td><span class="tp-badge tp-badge-fair">${c.band || '—'}</span></td>
+    <td><span class="tp-badge tp-badge-good">${c.mode}</span></td>
+    <td style="font-family:monospace; font-size:0.85rem">${c.rst_sent}/${c.rst_recv}</td>
+    <td style="font-size:0.82rem; color:var(--tp-muted)">${c.notes || ''}</td>
+    <td><button class="btn btn-sm" style="color:var(--tp-red); background:none; border:none; padding:0 4px"
+      onclick="deleteContact(${id})"><i class="fa-solid fa-trash-can"></i></button></td>
+  </tr>`;
+  document.getElementById('logBody').insertAdjacentHTML('afterbegin', row);
+}
+
+function deleteContact(id) {
+  if (!confirm('Delete this contact?')) return;
+  fetch(`/api/log/${id}`, { method: 'DELETE' })
+    .then(() => {
+      const row = document.getElementById('row_' + id);
+      if (row) row.remove();
+    });
+}
+
+function showMsg(msg, color) {
+  const el = document.getElementById('logMsg');
+  el.textContent = msg;
+  el.style.color = color;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 3000);
+}
+</script>
+{% endblock %}

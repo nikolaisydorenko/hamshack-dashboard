@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}APRS{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-12">
+    <h5 class="tp-section-title"><i class="fa-solid fa-map-location-dot me-2"></i>APRS Live Map — Etobicoke, ON</h5>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Map embed -->
+  <div class="col-12 col-md-9">
+    <div class="tp-card p-1" style="height:600px; overflow:hidden; border-radius:12px">
+      <iframe
+        src="https://aprs.fi/#!lat=43.6490&lng=-79.5469&z=11&mt=roadmap"
+        width="100%" height="100%"
+        style="border:none; border-radius:10px"
+        allowfullscreen>
+      </iframe>
+    </div>
+  </div>
+
+  <!-- Info panel -->
+  <div class="col-12 col-md-3">
+    <div class="tp-card mb-3">
+      <div class="tp-card-header">Your Station</div>
+      <div class="call-cell" style="font-size:1.3rem">VA3CZT</div>
+      <div style="font-size:0.8rem; color:var(--tp-muted); margin-top:0.3rem">
+        Etobicoke, ON<br>43.6490°N, 79.5469°W
+      </div>
+    </div>
+
+    <div class="tp-card mb-3">
+      <div class="tp-card-header mb-2">APRS Frequencies</div>
+      <div class="d-flex flex-column gap-2">
+        <div>
+          <div style="font-size:0.72rem; color:var(--tp-muted); text-transform:uppercase; letter-spacing:1px">North America</div>
+          <div class="freq-cell">144.390 MHz</div>
+        </div>
+        <div>
+          <div style="font-size:0.72rem; color:var(--tp-muted); text-transform:uppercase; letter-spacing:1px">Canada Alt</div>
+          <div class="freq-cell">144.390 MHz</div>
+        </div>
+        <div>
+          <div style="font-size:0.72rem; color:var(--tp-muted); text-transform:uppercase; letter-spacing:1px">ISS Downlink</div>
+          <div class="freq-cell">145.825 MHz</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tp-card mb-3">
+      <div class="tp-card-header mb-2">Talkpod A36+ APRS Setup</div>
+      <div style="font-size:0.8rem; color:var(--tp-muted); line-height:1.6">
+        The A36+ supports APRS on 144.390 MHz.<br><br>
+        <strong style="color:#fff">To enable:</strong><br>
+        Menu → APRS → Enable<br>
+        Set your callsign: VA3CZT<br>
+        SSID: -7 (portable)<br>
+        Beacon: Auto or Manual<br><br>
+        <strong style="color:#fff">Common SSIDs:</strong><br>
+        -0 Primary<br>
+        -7 Handheld<br>
+        -9 Vehicle<br>
+        -14 Wx station
+      </div>
+    </div>
+
+    <div class="tp-card">
+      <div class="tp-card-header mb-2">External APRS Tools</div>
+      <div class="d-flex flex-column gap-2">
+        <a href="https://aprs.fi/VA3CZT" target="_blank" class="btn btn-tp-outline btn-sm">
+          <i class="fa-solid fa-user me-1"></i>VA3CZT on aprs.fi
+        </a>
+        <a href="https://aprsdirect.com/" target="_blank" class="btn btn-tp-outline btn-sm">
+          <i class="fa-solid fa-map me-1"></i>APRS Direct
+        </a>
+        <a href="https://www.findu.com/cgi-bin/find.cgi?call=VA3CZT" target="_blank" class="btn btn-tp-outline btn-sm">
+          <i class="fa-solid fa-magnifying-glass-location me-1"></i>FindU Tracker
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-4">
+  <div class="col-12">
+    <h5 class="tp-section-title"><i class="fa-solid fa-gauge-high me-2"></i>Dashboard</h5>
+  </div>
+
+  <!-- Stat cards -->
+  <div class="col-6 col-md-3">
+    <div class="tp-card text-center">
+      <div class="tp-card-header">QSOs Logged</div>
+      <div class="tp-stat-value">{{ contact_count }}</div>
+      <div class="tp-stat-label">total contacts</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="tp-card text-center">
+      <div class="tp-card-header">Callsign</div>
+      <div class="tp-stat-value" style="font-size:1.6rem">{{ callsign }}</div>
+      <div class="tp-stat-label">Ontario, Canada</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="tp-card text-center" id="sfiCard">
+      <div class="tp-card-header">Solar Flux</div>
+      <div class="tp-stat-value" id="dashSfi">—</div>
+      <div class="tp-stat-label">SFI (10.7cm)</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="tp-card text-center" id="kindexCard">
+      <div class="tp-card-header">K-Index</div>
+      <div class="tp-stat-value" id="dashKindex">—</div>
+      <div class="tp-stat-label">geomagnetic</div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick links -->
+<div class="row g-3 mb-4">
+  <div class="col-12">
+    <h5 class="tp-section-title"><i class="fa-solid fa-bolt me-2"></i>Quick Access</h5>
+  </div>
+  {% set links = [
+    ('/repeaters', 'fa-radio', 'Repeater Finder', 'VHF/UHF near Etobicoke', 'tp-accent'),
+    ('/hf', 'fa-sun', 'HF Propagation', 'Solar data & band conditions', 'tp-accent2'),
+    ('/log', 'fa-book', 'Contact Log', 'Log and export QSOs', 'tp-accent'),
+    ('/aprs', 'fa-map-location-dot', 'APRS Map', 'Live position tracking', 'tp-accent2'),
+  ] %}
+  {% for href, icon, title, desc, color in links %}
+  <div class="col-6 col-md-3">
+    <a href="{{ href }}" class="text-decoration-none">
+      <div class="tp-card h-100" style="border-color: rgba(0,150,255,0.1); transition: border-color 0.2s;"
+           onmouseover="this.style.borderColor='var(--{{ color }})'" onmouseout="this.style.borderColor='rgba(0,150,255,0.1)'">
+        <i class="fa-solid {{ icon }} mb-2" style="font-size:1.5rem; color: var(--{{ color }})"></i>
+        <div style="font-weight:600; color:#fff; margin-bottom:0.2rem">{{ title }}</div>
+        <div style="font-size:0.8rem; color: var(--tp-muted)">{{ desc }}</div>
+      </div>
+    </a>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Recent contacts -->
+<div class="row g-3">
+  <div class="col-12">
+    <h5 class="tp-section-title"><i class="fa-solid fa-clock-rotate-left me-2"></i>Recent Contacts</h5>
+    {% if recent %}
+    <div class="tp-card p-0" style="overflow:hidden">
+      <table class="table tp-table mb-0">
+        <thead><tr>
+          <th>DateTime (UTC)</th><th>Callsign</th><th>Frequency</th><th>Mode</th><th>RST</th>
+        </tr></thead>
+        <tbody>
+          {% for c in recent %}
+          <tr>
+            <td style="font-size:0.82rem; color:var(--tp-muted)">{{ c.datetime[:16].replace('T',' ') }}</td>
+            <td class="call-cell">{{ c.callsign }}</td>
+            <td class="freq-cell">{{ "%.4f"|format(c.frequency) if c.frequency else "—" }} MHz</td>
+            <td><span class="tp-badge tp-badge-good">{{ c.mode }}</span></td>
+            <td style="font-family:monospace">{{ c.rst_sent }}/{{ c.rst_recv }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="tp-card text-center" style="padding:2.5rem">
+      <i class="fa-solid fa-book-open" style="font-size:2rem; color:var(--tp-muted)"></i>
+      <div class="mt-2" style="color:var(--tp-muted)">No contacts logged yet. <a href="/log" style="color:var(--tp-accent)">Log your first QSO</a></div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  fetch('/api/solar').then(r => r.json()).then(d => {
+    if (d.sfi != null) {
+      document.getElementById('dashSfi').textContent = d.sfi;
+    }
+    if (d.kp != null) {
+      document.getElementById('dashKindex').textContent = parseFloat(d.kp).toFixed(1);
+      const kn = parseFloat(d.kp);
+      document.getElementById('kindexCard').style.borderColor =
+        kn <= 2 ? 'var(--tp-green)' : kn <= 4 ? 'var(--tp-yellow)' : 'var(--tp-red)';
+    }
+  }).catch(() => {});
+</script>
+{% endblock %}

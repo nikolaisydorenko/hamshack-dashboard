@@ -1,0 +1,247 @@
+:root {
+  --tp-bg: #0b1220;
+  --tp-card: #111d2e;
+  --tp-card2: #162033;
+  --tp-accent: #00d4aa;
+  --tp-accent2: #0096ff;
+  --tp-red: #ff4d6d;
+  --tp-yellow: #ffd166;
+  --tp-green: #06d6a0;
+  --tp-border: #1e3050;
+  --tp-muted: #4a6080;
+  --tp-text: #c8d8e8;
+}
+
+body {
+  background-color: var(--tp-bg);
+  color: var(--tp-text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+/* Navbar */
+.tp-navbar {
+  background: #080f1a !important;
+  border-bottom: 1px solid var(--tp-border);
+  padding: 0.5rem 1.5rem;
+}
+
+.tp-brand {
+  font-family: 'Courier New', monospace;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--tp-accent) !important;
+  letter-spacing: 3px;
+}
+
+.tp-callsign {
+  font-family: 'Courier New', monospace;
+  font-size: 1rem;
+  color: var(--tp-accent2) !important;
+  font-weight: 600;
+  letter-spacing: 2px;
+}
+
+.tp-utc {
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  color: var(--tp-accent) !important;
+  letter-spacing: 1px;
+}
+
+.nav-link {
+  color: var(--tp-text) !important;
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem !important;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.nav-link:hover, .nav-link.active {
+  background: rgba(0, 212, 170, 0.12);
+  color: var(--tp-accent) !important;
+}
+
+/* Cards */
+.tp-card {
+  background: var(--tp-card);
+  border: 1px solid var(--tp-border);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.tp-card-header {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--tp-muted);
+  margin-bottom: 0.4rem;
+}
+
+.tp-stat-value {
+  font-family: 'Courier New', monospace;
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--tp-accent);
+  line-height: 1.1;
+}
+
+.tp-stat-label {
+  font-size: 0.8rem;
+  color: var(--tp-muted);
+  margin-top: 0.2rem;
+}
+
+/* Section title */
+.tp-section-title {
+  font-size: 0.8rem;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--tp-muted);
+  border-bottom: 1px solid var(--tp-border);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Tables */
+.tp-table {
+  font-size: 0.88rem;
+  color: var(--tp-text);
+}
+
+.tp-table thead th {
+  font-size: 0.72rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--tp-muted);
+  border-color: var(--tp-border);
+  background: var(--tp-card2);
+  padding: 0.6rem 0.8rem;
+}
+
+.tp-table tbody td {
+  border-color: var(--tp-border);
+  padding: 0.55rem 0.8rem;
+  vertical-align: middle;
+}
+
+.tp-table tbody tr:hover {
+  background: rgba(0, 212, 170, 0.04);
+}
+
+.freq-cell {
+  font-family: 'Courier New', monospace;
+  color: var(--tp-accent);
+  font-size: 0.95rem;
+}
+
+.offset-cell {
+  font-family: 'Courier New', monospace;
+  color: var(--tp-accent2);
+  font-size: 0.85rem;
+}
+
+.call-cell {
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  color: #fff;
+}
+
+/* Buttons */
+.btn-tp {
+  background: var(--tp-accent);
+  color: #000;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  padding: 0.45rem 1.1rem;
+  transition: opacity 0.15s;
+}
+.btn-tp:hover { opacity: 0.85; color: #000; }
+
+.btn-tp-outline {
+  background: transparent;
+  color: var(--tp-accent);
+  border: 1px solid var(--tp-accent);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  padding: 0.45rem 1.1rem;
+  transition: background 0.15s;
+}
+.btn-tp-outline:hover { background: rgba(0,212,170,0.12); color: var(--tp-accent); }
+
+/* Band condition dots */
+.band-dot {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+/* Solar metric cards */
+.solar-card {
+  background: var(--tp-card2);
+  border: 1px solid var(--tp-border);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  text-align: center;
+}
+
+.solar-val {
+  font-family: 'Courier New', monospace;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.solar-label {
+  font-size: 0.72rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--tp-muted);
+}
+
+/* Status badges */
+.tp-badge {
+  font-size: 0.72rem;
+  padding: 0.25em 0.6em;
+  border-radius: 4px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.tp-badge-good { background: rgba(6,214,160,0.15); color: var(--tp-green); }
+.tp-badge-fair { background: rgba(255,209,102,0.15); color: var(--tp-yellow); }
+.tp-badge-poor { background: rgba(255,77,109,0.15); color: var(--tp-red); }
+
+/* Forms */
+.tp-form-control {
+  background: var(--tp-card2);
+  border: 1px solid var(--tp-border);
+  color: var(--tp-text);
+  border-radius: 8px;
+  font-size: 0.88rem;
+}
+.tp-form-control:focus {
+  background: var(--tp-card2);
+  border-color: var(--tp-accent);
+  color: var(--tp-text);
+  box-shadow: 0 0 0 2px rgba(0,212,170,0.2);
+}
+
+select.tp-form-control option { background: var(--tp-card); }
+
+/* Spinner */
+.tp-spinner {
+  border: 3px solid var(--tp-border);
+  border-top-color: var(--tp-accent);
+  border-radius: 50%;
+  width: 32px; height: 32px;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--tp-bg); }
+::-webkit-scrollbar-thumb { background: var(--tp-border); border-radius: 3px; }

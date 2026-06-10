@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Repeaters{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-12">
+    <h5 class="tp-section-title"><i class="fa-solid fa-radio me-2"></i>Repeater Finder — Etobicoke, ON</h5>
+  </div>
+
+  <!-- Filters -->
+  <div class="col-12">
+    <div class="tp-card">
+      <div class="row g-2 align-items-end">
+        <div class="col-6 col-md-2">
+          <label class="tp-card-header d-block">Band</label>
+          <select id="filterBand" class="form-select tp-form-control">
+            <option value="%25">All bands</option>
+            <option value="2m">2m (VHF)</option>
+            <option value="70cm">70cm (UHF)</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-3">
+          <label class="tp-card-header d-block">Radius: <span id="distLabel">50</span> km</label>
+          <input type="range" class="form-range" id="filterDist" min="10" max="150" step="10" value="50"
+                 oninput="document.getElementById('distLabel').textContent=this.value">
+        </div>
+        <div class="col-12 col-md-3">
+          <button class="btn btn-tp w-100" onclick="loadRepeaters()">
+            <i class="fa-solid fa-magnifying-glass me-1"></i>Search
+          </button>
+        </div>
+        <div class="col-12 col-md-4 text-md-end">
+          <a id="chirpExportBtn" href="/api/export/chirp" class="btn btn-tp-outline">
+            <i class="fa-solid fa-file-arrow-down me-1"></i>Export CHIRP CSV
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading / results -->
+<div id="loadingDiv" class="text-center py-5" style="display:none!important">
+  <div class="tp-spinner mx-auto mb-3"></div>
+  <div style="color:var(--tp-muted); font-size:0.85rem">Fetching from RepeaterBook…</div>
+</div>
+
+<div id="resultsDiv">
+  <div class="tp-card text-center" style="padding:3rem; color:var(--tp-muted)">
+    <i class="fa-solid fa-tower-broadcast" style="font-size:2rem"></i>
+    <div class="mt-2">Hit Search to find repeaters near you</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const LAT = 43.6490, LON = -79.5469;
+
+function loadRepeaters() {
+  const band = document.getElementById('filterBand').value;
+  const dist = document.getElementById('filterDist').value;
+
+  const loadDiv = document.getElementById('loadingDiv');
+  const resDiv  = document.getElementById('resultsDiv');
+  loadDiv.style.display = 'block';
+  resDiv.innerHTML = '';
+
+  fetch(`/api/repeaters?lat=${LAT}&lon=${LON}&distance=${dist}&band=${band}`)
+    .then(r => r.json())
+    .then(data => {
+      loadDiv.style.display = 'none';
+      const results = data.results || [];
+      if (!results.length) {
+        resDiv.innerHTML = '<div class="tp-card text-center" style="padding:2rem;color:var(--tp-muted)">No repeaters found in this range.</div>';
+        return;
+      }
+      renderTable(results);
+    })
+    .catch(e => {
+      loadDiv.style.display = 'none';
+      resDiv.innerHTML = `<div class="tp-card text-center" style="color:var(--tp-red);padding:2rem">Error: ${e.message}</div>`;
+    });
+}
+
+function renderTable(data) {
+  const resDiv = document.getElementById('resultsDiv');
+  let rows = data.map(r => {
+    const rx = parseFloat(r.Frequency || 0).toFixed(5);
+    const txRaw = parseFloat(r['Input Freq'] || r.Input_Freq || r.Frequency || 0);
+    const rx_f = parseFloat(r.Frequency || 0);
+    const offset = (txRaw - rx_f).toFixed(3);
+    const offsetStr = txRaw > rx_f ? `+${offset}` : txRaw < rx_f ? `${offset}` : '0.000';
+    const ctcss = r.CTCSS || r.PL || '—';
+    const dist  = r.distance ? parseFloat(r.distance).toFixed(1) + ' km' : '—';
+    const use   = r.Use || r.use || '';
+    const badge = use.toLowerCase().includes('open')
+      ? '<span class="tp-badge tp-badge-good">OPEN</span>'
+      : '<span class="tp-badge tp-badge-fair">CLOSED</span>';
+
+    return `<tr>
+      <td class="call-cell">${r.Callsign || '—'}</td>
+      <td class="freq-cell">${rx} MHz</td>
+      <td class="offset-cell">${offsetStr} MHz</td>
+      <td style="font-family:monospace; font-size:0.85rem">${ctcss} Hz</td>
+      <td style="font-size:0.85rem">${r.Landmark || r.City || '—'}</td>
+      <td style="font-size:0.82rem; color:var(--tp-muted)">${dist}</td>
+      <td>${badge}</td>
+    </tr>`;
+  }).join('');
+
+  resDiv.innerHTML = `
+    <div class="tp-card p-0" style="overflow:auto">
+      <div class="px-3 py-2" style="font-size:0.8rem; color:var(--tp-muted); border-bottom:1px solid var(--tp-border)">
+        Found <strong style="color:var(--tp-accent)">${data.length}</strong> repeaters
+      </div>
+      <table class="table tp-table mb-0">
+        <thead><tr>
+          <th>Callsign</th><th>RX Freq</th><th>Offset</th><th>CTCSS</th><th>Location</th><th>Distance</th><th>Status</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+// Auto-load on page open
+loadRepeaters();
+</script>
+{% endblock %}
