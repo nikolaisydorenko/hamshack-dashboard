@@ -563,16 +563,61 @@ def api_custom_repeaters_import():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+def _freq_to_band(freq_khz):
+    f = float(freq_khz)
+    if 1800  <= f <  2000:  return '160m'
+    if 3500  <= f <  4000:  return '80m'
+    if 5000  <= f <  5500:  return '60m'
+    if 7000  <= f <  7300:  return '40m'
+    if 10100 <= f < 10150:  return '30m'
+    if 14000 <= f < 14350:  return '20m'
+    if 18068 <= f < 18168:  return '17m'
+    if 21000 <= f < 21450:  return '15m'
+    if 24890 <= f < 24990:  return '12m'
+    if 28000 <= f < 29700:  return '10m'
+    if 50000 <= f < 54000:  return '6m'
+    if 144000 <= f < 148000: return '2m'
+    if 430000 <= f < 440000: return '70cm'
+    return '?'
+
 @app.route("/api/dx")
 def api_dx():
-    band = request.args.get("band", "all")
+    from datetime import datetime, timezone
+    band_filter = request.args.get("band", "all")
     try:
-        r = requests.get("https://www.dxsummit.fi/api/v1/spots",
-                         params={"limit": 100},
+        r = requests.get("https://www.dxwatch.com/dxsd1/s.php",
+                         params={"s": 0, "r": 100},
                          headers={"User-Agent": "HamShackDashboard/1.0"}, timeout=10)
-        spots = r.json()
-        if band != "all":
-            spots = [s for s in spots if s.get("band","").lower() == band.lower()]
+        data = r.json()
+        now = datetime.now(timezone.utc)
+        spots = []
+        for v in data.get("s", {}).values():
+            # v = [spotter, freq_khz, dx_call, comment, time_str, minutes_ago, ...]
+            if len(v) < 6:
+                continue
+            spotter, freq, dx_call, comment, time_str = v[0], v[1], v[2], v[3], v[4]
+            try:
+                parts = time_str.split()          # ["0516z", "10", "Jun"]
+                hhmm  = parts[0].rstrip('z')
+                dt = datetime.strptime(
+                    f"{parts[1]} {parts[2]} {now.year} {hhmm[:2]}:{hhmm[2:]}",
+                    "%d %b %Y %H:%M"
+                ).replace(tzinfo=timezone.utc)
+                iso_time = dt.isoformat()
+            except Exception:
+                iso_time = None
+            band = _freq_to_band(freq)
+            spots.append({
+                "dx_call":   dx_call,
+                "frequency": float(freq),
+                "band":      band,
+                "spotter":   spotter,
+                "comment":   comment,
+                "time":      iso_time,
+            })
+        if band_filter != "all":
+            spots = [s for s in spots if s["band"] == band_filter]
+        spots.sort(key=lambda s: s.get("time") or "", reverse=True)
         return jsonify(spots[:80])
     except Exception as e:
         return jsonify({"error": str(e)}), 500
