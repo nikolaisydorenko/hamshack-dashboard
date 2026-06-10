@@ -1,6 +1,6 @@
-# Talkpod
+# HamShack Dashboard
 
-A self-hosted ham radio web dashboard for the **Talkpod A36 Plus** (and compatible handheld transceivers). Built for **VA3CZT** in Etobicoke, ON.
+A self-hosted ham radio web dashboard — works with any CHIRP-compatible radio. Built for **VA3CZT** in Etobicoke, ON.
 
 ## Features
 
@@ -19,6 +19,7 @@ A self-hosted ham radio web dashboard for the **Talkpod A36 Plus** (and compatib
 - **Data sources:** RepeaterBook API, NOAA Space Weather Prediction Center, aprs.fi
 - **Frontend:** Bootstrap 5 (dark), Font Awesome — no JS frameworks, no build step
 - **Database:** SQLite (contact log)
+- **Compatible radios:** Any CHIRP-supported radio (Talkpod, Baofeng, Yaesu, Kenwood, Icom, and hundreds more)
 
 ## Running
 
