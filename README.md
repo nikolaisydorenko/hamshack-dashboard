@@ -1,36 +1,73 @@
 # HamShack Dashboard
 
-A self-hosted ham radio web dashboard — works with any CHIRP-compatible radio. Built for **VA3CZT** in Etobicoke, ON.
+A self-hosted web dashboard for amateur radio operators. Built with Flask and SQLite — runs on a Raspberry Pi, a home server, or a Proxmox LXC container. No cloud account required.
+
+**Live demo:** *(self-hosted — clone and run your own)*
+
+---
 
 ## Features
 
-| Page | Description |
-|---|---|
-| **Dashboard** | Live solar conditions (SFI, K-index), UTC clock, recent contacts |
-| **Repeater Finder** | Pulls open VHF/UHF repeaters near you from RepeaterBook — filterable by band and radius |
-| **CHIRP Export** | One-click CSV export formatted for import directly into CHIRP radio programming software |
-| **HF Propagation** | Live NOAA solar data, estimated band conditions (160m–6m), MUF estimates for common paths |
-| **Contact Log** | Log QSOs with callsign, frequency, mode, RST — export as ADIF for LOTW/other loggers |
-| **APRS Map** | Live aprs.fi map centred on your location, APRS setup guide for A36+ |
+### Dashboard
+- Live solar conditions: SFI, K-index, A-index, X-ray flux
+- UTC clock
+- Current weather at your QTH (temperature, humidity, wind)
+- Quick-access links to all pages
 
-## Stack
+### Repeater Finder
+- 141+ local repeaters with exact GPS tower coordinates
+- Filter by band (2m / 70cm) and search radius
+- Sorted by distance from your home QTH
+- Import repeaters from a RepeaterBook CSV export or a KML file
+- Add custom repeaters manually via the web UI
+- One-click **CHIRP CSV export** to program your radio directly
 
-- **Backend:** Python 3 + Flask
-- **Data sources:** RepeaterBook API, NOAA Space Weather Prediction Center, aprs.fi
-- **Frontend:** Bootstrap 5 (dark), Font Awesome — no JS frameworks, no build step
-- **Database:** SQLite (contact log)
-- **Compatible radios:** Any CHIRP-supported radio (Talkpod, Baofeng, Yaesu, Kenwood, Icom, and hundreds more)
+### HF Propagation
+- Live NOAA solar data
+- Band condition estimates for 160m through 6m
+- MUF estimates for paths from your region
+- Links to VOACAP, PSKReporter, and DXMaps
 
-## Running
+### DX Cluster
+- Live DX spots via DX Watch
+- Filter by band (160m through 70cm)
+- Colour-coded band badges
+- Auto-refreshes every 60 seconds
+
+### Contact Log
+- Log QSOs with callsign, frequency, mode, and RST report
+- Export as ADIF for LoTW, QRZ, or any other logger
+
+### Events & Contests
+- Upcoming ham radio contests from the Contest Calendar
+- Live POTA activations with park info and frequency
+- Auto-refreshes every 90 seconds
+
+### Tools
+- **Callsign Lookup** — FCC database for US calls, DXCC info for all others
+- **Antenna Calculator** — dipole, quarter-wave, 5/8-wave, full-wave loop, 3-element Yagi with velocity factor slider and band quick-select
+- **Band Plan** — HF and VHF/UHF Canadian band plan with FT8/FT4/WSPR frequencies
+
+### APRS
+- Live APRS.fi map centred on your QTH
+- APRS setup guide
+
+---
+
+## Quick Start
 
 ```bash
-pip install flask requests
+git clone https://github.com/nikolaisydorenko/hamshack-dashboard.git
+cd hamshack-dashboard
+pip install -r requirements.txt
 python3 app.py
 ```
 
-App runs on port `8000`, accessible from any device on your LAN at `http://<server-ip>:8000`.
+Open `http://localhost:8000` in your browser. On first run, go to **Settings** and enter your callsign and home coordinates.
 
-## Running as a systemd service
+---
+
+## Running as a Service (Linux)
 
 ```bash
 sudo cp talkpod.service /etc/systemd/system/
@@ -38,33 +75,41 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now talkpod
 ```
 
-## Connecting your Talkpod A36 Plus
+The app will start automatically on boot and be accessible from any device on your network at `http://<server-ip>:8000`.
 
-1. Install a **USB programming cable** (Kenwood K-type 2-pin)
-2. Install the **CH340 driver** on Windows (from wch-ic.com)
-3. Install **CHIRP Next** from chirpmyradio.com
-4. In CHIRP: `Radio → Download from Radio`, select your COM port
-5. Use the **CHIRP Export** page in this app to get a ready-to-import channel list of repeaters near you
+---
 
-## Finding repeaters
+## Importing Your Local Repeaters
 
-The Repeater Finder page queries RepeaterBook for open FM repeaters within your chosen radius. Each result shows:
-- RX frequency, offset direction, CTCSS/PL tone
-- Location and distance from your home QTH
-- Open/Closed status
+The app ships with a bundled repeater database for the Greater Toronto Area. To add your own region:
 
-Export to CHIRP to program them all into your radio in one shot.
+1. Export a **CSV** from [RepeaterBook](https://www.repeaterbook.com) (free account required)
+2. On the Repeater Finder page, click the upload icon and select the CSV
+3. Duplicates are automatically skipped
 
-## HF Propagation
+You can also import a **KML** file (e.g. from Google Maps) with exact tower GPS coordinates, or add individual repeaters via the **+** button.
 
-The HF page pulls live data from NOAA SWPC every time you load it:
-- **SFI** (Solar Flux Index) — higher is better; >150 = excellent HF
-- **Kp** (K-index) — lower is better; >4 means geomagnetic storm, bad for HF
-- **Band conditions** — colour-coded estimate for 160m through 6m based on SFI + Kp
-- **MUF estimates** — approximate Maximum Usable Frequency for common paths from Ontario
+---
 
-For precise path predictions, links to VOACAP, PSKReporter, and DXMaps are provided.
+## Stack
+
+| | |
+|---|---|
+| Backend | Python 3 + Flask |
+| Database | SQLite |
+| Frontend | Bootstrap 5, Font Awesome 6, Leaflet.js |
+| Fonts | DM Sans + JetBrains Mono |
+| Solar data | NOAA Space Weather Prediction Center |
+| DX spots | DX Watch |
+| Weather | Open-Meteo (no API key needed) |
+| Callsign data | callook.info (US), HamQTH DXCC (international) |
+
+No build step. No Node.js. No API keys required for basic operation.
+
+---
 
 ## License
 
-MIT
+MIT — free to use, modify, and share.
+
+Built by **VA3CZT** — Nikolai, Etobicoke, ON.
