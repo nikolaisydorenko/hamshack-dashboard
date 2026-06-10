@@ -13,7 +13,8 @@
 <nav class="navbar navbar-expand-lg navbar-dark tp-navbar">
   <div class="container-fluid">
     <a class="navbar-brand tp-brand" href="index.html"><i class="fa-solid fa-tower-broadcast me-2"></i>HAMSHACK</a>
-    <span class="navbar-text tp-callsign me-3">VA3CZT</span>
+    <span class="navbar-text tp-callsign me-3" id="navCallsign">—</span>
+    <button class="btn btn-sm ms-1" onclick="HS.openSettings()" style="color:var(--text-faint);background:none;border:1px solid var(--border);border-radius:8px;padding:3px 10px" title="Station settings"><i class="fa-solid fa-gear"></i></button>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu"><span class="navbar-toggler-icon"></span></button>
     <div class="collapse navbar-collapse" id="navMenu">
       <ul class="navbar-nav me-auto">
@@ -42,7 +43,7 @@
   <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
     <div>
       <h1 class="tp-page-title mb-0">HamShack Dashboard</h1>
-      <div style="color:var(--text-faint); font-size:0.82rem; margin-top:2px">VA3CZT · Etobicoke, ON · EN92</div>
+      <div id="dashSubtitle" style="color:var(--text-faint); font-size:0.82rem; margin-top:2px">—</div>
     </div>
   </div>
 
@@ -82,7 +83,7 @@
   <div class="row g-3 mb-3">
     <div class="col-12">
       <div class="tp-card fade-up" id="weatherCard">
-        <div class="tp-card-header mb-2"><i class="fa-solid fa-cloud-sun me-1"></i> Weather at QTH — Etobicoke, ON</div>
+        <div class="tp-card-header mb-2"><i class="fa-solid fa-cloud-sun me-1"></i> Weather at QTH — <span id="weatherQTH">your location</span></div>
         <div id="weatherBody" class="d-flex align-items-center gap-4 flex-wrap">
           <div style="color:var(--text-faint); font-size:0.88rem">Loading weather…</div>
         </div>
@@ -166,9 +167,9 @@ async function loadSolar(){
   if(r4.status==='fulfilled'){const d=r4.value,l=Array.isArray(d)?d[d.length-1]:d;document.getElementById('wind').textContent=l?.proton_speed??'—';}
 }
 
-async function loadWeather(){
+async function loadWeather(lat, lon){
   try{
-    const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude=43.6532&longitude=-79.3832&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code,precipitation&wind_speed_unit=kmh&temperature_unit=celsius&timezone=auto&forecast_days=1');
+    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code,precipitation&wind_speed_unit=kmh&temperature_unit=celsius&timezone=auto&forecast_days=1`);
     const d=await r.json();const c=d.current||{};
     const code=c.weather_code||0;const[desc,icon,col]=WMO[code]||['Unknown','fa-question','var(--text-faint)'];
     const dirs=['N','NE','E','SE','S','SW','W','NW'],wd=Math.round(((c.wind_direction_10m||0)+22.5)/45)%8;
@@ -184,7 +185,19 @@ async function loadWeather(){
   }catch(e){document.getElementById('weatherBody').innerHTML=`<span style="color:var(--text-faint)">Weather unavailable</span>`;}
 }
 
-loadSolar();loadWeather();
+function onSettingsSaved(){ location.reload(); }
+
+function initDashboard(){
+  const s = HS.get();
+  const subtitle = [s.callsign, s.city, s.grid].filter(Boolean).join(' · ');
+  document.getElementById('dashSubtitle').textContent = subtitle || 'Enter your callsign via the ⚙ button';
+  if(s.city) document.getElementById('weatherQTH').textContent = s.city;
+  loadSolar();
+  if(s.lat && s.lon) loadWeather(s.lat, s.lon);
+}
+
+document.addEventListener('DOMContentLoaded', initDashboard);
 </script>
+<script src="settings.js"></script>
 </body>
 </html>

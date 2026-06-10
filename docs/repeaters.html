@@ -13,7 +13,8 @@
 <nav class="navbar navbar-expand-lg navbar-dark tp-navbar">
   <div class="container-fluid">
     <a class="navbar-brand tp-brand" href="index.html"><i class="fa-solid fa-tower-broadcast me-2"></i>HAMSHACK</a>
-    <span class="navbar-text tp-callsign me-3">VA3CZT</span>
+    <span class="navbar-text tp-callsign me-3" id="navCallsign">—</span>
+    <button class="btn btn-sm ms-1" onclick="HS.openSettings()" style="color:var(--text-faint);background:none;border:1px solid var(--border);border-radius:8px;padding:3px 10px" title="Station settings"><i class="fa-solid fa-gear"></i></button>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu"><span class="navbar-toggler-icon"></span></button>
     <div class="collapse navbar-collapse" id="navMenu">
       <ul class="navbar-nav me-auto">
@@ -49,8 +50,8 @@
       <div class="col-12 col-md-4">
         <label class="tp-card-header mb-1">Your Location (lat, lon)</label>
         <div class="d-flex gap-2">
-          <input type="number" id="userLat" class="form-control tp-form-control" placeholder="43.649" step="0.0001" value="43.6490">
-          <input type="number" id="userLon" class="form-control tp-form-control" placeholder="-79.547" step="0.0001" value="-79.5469">
+          <input type="number" id="userLat" class="form-control tp-form-control" placeholder="Latitude" step="0.0001">
+          <input type="number" id="userLon" class="form-control tp-form-control" placeholder="Longitude" step="0.0001">
           <button class="btn btn-tp-outline" onclick="useGPS()" title="Use my location"><i class="fa-solid fa-location-dot"></i></button>
         </div>
       </div>
@@ -129,12 +130,19 @@ function freqToBand(f){
   return'other';
 }
 
+function onSettingsSaved(){ const s=HS.get(); if(s.lat){document.getElementById('userLat').value=s.lat; document.getElementById('userLon').value=s.lon;} render(); }
+
 let allRepeaters=[];
-fetch('data/repeaters.json').then(r=>r.json()).then(d=>{allRepeaters=d;render();});
+fetch('data/repeaters.json').then(r=>r.json()).then(d=>{
+  allRepeaters=d;
+  const s=HS.get();
+  if(s.lat){ document.getElementById('userLat').value=s.lat; document.getElementById('userLon').value=s.lon; }
+  render();
+});
 
 function render(){
-  const lat=parseFloat(document.getElementById('userLat').value)||43.649;
-  const lon=parseFloat(document.getElementById('userLon').value)||-79.5469;
+  const lat=parseFloat(document.getElementById('userLat').value)||0;
+  const lon=parseFloat(document.getElementById('userLon').value)||0;
   const band=document.getElementById('bandFilter').value;
   const radius=parseFloat(document.getElementById('radiusFilter').value);
   const q=document.getElementById('search').value.trim().toLowerCase();
@@ -183,5 +191,6 @@ function useGPS(){
 document.getElementById('userLat').addEventListener('change',render);
 document.getElementById('userLon').addEventListener('change',render);
 </script>
+<script src="settings.js"></script>
 </body>
 </html>

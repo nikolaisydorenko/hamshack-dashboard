@@ -22,7 +22,8 @@
 <nav class="navbar navbar-expand-lg navbar-dark tp-navbar">
   <div class="container-fluid">
     <a class="navbar-brand tp-brand" href="index.html"><i class="fa-solid fa-tower-broadcast me-2"></i>HAMSHACK</a>
-    <span class="navbar-text tp-callsign me-3">VA3CZT</span>
+    <span class="navbar-text tp-callsign me-3" id="navCallsign">—</span>
+    <button class="btn btn-sm ms-1" onclick="HS.openSettings()" style="color:var(--text-faint);background:none;border:1px solid var(--border);border-radius:8px;padding:3px 10px" title="Station settings"><i class="fa-solid fa-gear"></i></button>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu"><span class="navbar-toggler-icon"></span></button>
     <div class="collapse navbar-collapse" id="navMenu">
       <ul class="navbar-nav me-auto">
@@ -184,5 +185,6 @@ function updateClock(){const n=new Date(),h=String(n.getUTCHours()).padStart(2,'
 updateClock();setInterval(updateClock,1000);
 document.querySelectorAll('.nav-link:not(.dropdown-toggle),.dropdown-item').forEach(a=>{if(a.getAttribute('href')===(location.pathname.split('/').pop()||'index.html'))a.classList.add('active');});
 </script>
+<script src="settings.js"></script>
 </body>
 </html>
