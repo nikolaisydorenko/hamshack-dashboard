@@ -235,20 +235,14 @@ function renderTable(data, total) {
     const offStr = r.offset_mhz > 0 ? `+${r.offset_mhz.toFixed(3)}`
                  : r.offset_mhz < 0 ? `${r.offset_mhz.toFixed(3)}` : '0.000';
     const ctcss = r.ctcss && parseFloat(r.ctcss) > 0 ? r.ctcss + ' Hz' : '—';
-    const localBadge = r.source === 'local'
-      ? `<span style="font-size:0.65rem;padding:1px 5px;border-radius:3px;background:rgba(0,212,170,0.15);color:var(--tp-accent);border:1px solid var(--tp-accent);margin-left:4px">LOCAL</span>`
-      : '';
-    const delBtn = r.source === 'local'
-      ? `<button class="btn btn-sm" style="padding:0 4px;color:var(--tp-red);background:none;border:none;font-size:0.8rem" onclick="deleteRepeater(${r.custom_id})" title="Remove"><i class="fa-solid fa-trash"></i></button>`
-      : '';
     return `<tr>
-      <td class="call-cell">${r.callsign || '—'}${localBadge}</td>
+      <td class="call-cell">${r.callsign || '—'}</td>
       <td class="freq-cell">${r.frequency.toFixed(4)} MHz</td>
       <td class="offset-cell">${offStr} MHz</td>
       <td style="font-family:monospace;font-size:0.85rem">${ctcss}</td>
       <td style="font-size:0.85rem">${r.mode || 'FM'}</td>
       <td style="font-size:0.82rem;color:var(--tp-muted)">${r.city || '—'}</td>
-      <td style="font-family:monospace;font-size:0.82rem;color:var(--tp-muted)">${r.distance} km${delBtn}</td>
+      <td style="font-family:monospace;font-size:0.82rem;color:var(--tp-muted)">${r.distance} km</td>
     </tr>`;
   }).join('');
 
