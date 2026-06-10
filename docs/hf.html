@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HamShack — HF Propagation</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <link href="style.css" rel="stylesheet">
+</head>
+<body>
+<div class="bg-glow"></div>
+<nav class="navbar navbar-expand-lg navbar-dark tp-navbar">
+  <div class="container-fluid">
+    <a class="navbar-brand tp-brand" href="index.html"><i class="fa-solid fa-tower-broadcast me-2"></i>HAMSHACK</a>
+    <span class="navbar-text tp-callsign me-3">VA3CZT</span>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu"><span class="navbar-toggler-icon"></span></button>
+    <div class="collapse navbar-collapse" id="navMenu">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item"><a class="nav-link" href="index.html"><i class="fa-solid fa-gauge-high me-1"></i>Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link" href="repeaters.html"><i class="fa-solid fa-radio me-1"></i>Repeaters</a></li>
+        <li class="nav-item"><a class="nav-link" href="hf.html"><i class="fa-solid fa-sun me-1"></i>HF Propagation</a></li>
+        <li class="nav-item"><a class="nav-link" href="dx.html"><i class="fa-solid fa-satellite-dish me-1"></i>DX Cluster</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"><i class="fa-solid fa-screwdriver-wrench me-1"></i>Tools</a>
+          <ul class="dropdown-menu dropdown-menu-dark">
+            <li><a class="dropdown-item" href="callsign.html"><i class="fa-solid fa-id-card me-2"></i>Callsign Lookup</a></li>
+            <li><a class="dropdown-item" href="antenna.html"><i class="fa-solid fa-wifi me-2"></i>Antenna Calculator</a></li>
+            <li><a class="dropdown-item" href="bandplan.html"><i class="fa-solid fa-chart-bar me-2"></i>Band Plan</a></li>
+          </ul>
+        </li>
+      </ul>
+      <ul class="navbar-nav ms-auto align-items-center gap-2">
+        <li class="nav-item"><span class="navbar-text tp-utc" id="utcClock">UTC --:--:--</span></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid py-4 px-4">
+  <h1 class="tp-page-title mb-4"><i class="fa-solid fa-sun me-2"></i>HF Propagation</h1>
+
+  <!-- Solar stats -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3"><div class="tp-card text-center fade-up">
+      <div class="tp-card-header mb-2">Solar Flux (SFI)</div>
+      <div class="tp-stat-value" id="sfiVal">—</div>
+      <div class="tp-stat-label">10.7 cm flux</div>
+    </div></div>
+    <div class="col-6 col-md-3"><div class="tp-card text-center fade-up">
+      <div class="tp-card-header mb-2">K-Index</div>
+      <div class="tp-stat-value" id="kindexVal">—</div>
+      <div class="tp-stat-label">Geomagnetic</div>
+    </div></div>
+    <div class="col-6 col-md-3"><div class="tp-card text-center fade-up">
+      <div class="tp-card-header mb-2">A-Index</div>
+      <div class="tp-stat-value" id="aindexVal">—</div>
+      <div class="tp-stat-label">Daily avg</div>
+    </div></div>
+    <div class="col-6 col-md-3"><div class="tp-card text-center fade-up">
+      <div class="tp-card-header mb-2">Sunspot #</div>
+      <div class="tp-stat-value" id="ssnVal">—</div>
+      <div class="tp-stat-label">SSN today</div>
+    </div></div>
+  </div>
+
+  <!-- Band conditions -->
+  <div class="row g-3 mb-4">
+    <div class="col-12">
+      <div class="tp-card fade-up">
+        <div class="tp-card-header mb-3"><i class="fa-solid fa-signal me-1"></i> Band Conditions — from Etobicoke, ON</div>
+        <div class="row g-2" id="bandConditions">
+          <div class="col-12" style="color:var(--text-faint);font-size:0.85rem">Loading…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MUF estimates -->
+  <div class="row g-3 mb-4">
+    <div class="col-12">
+      <div class="tp-card fade-up">
+        <div class="tp-card-header mb-3"><i class="fa-solid fa-arrow-trend-up me-1"></i> MUF Estimates</div>
+        <div class="row g-2" id="mufEstimates">
+          <div class="col-12" style="color:var(--text-faint);font-size:0.85rem">Loading…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- External tools -->
+  <div class="tp-card fade-up">
+    <div class="tp-card-header mb-3"><i class="fa-solid fa-arrow-up-right-from-square me-1"></i> External Propagation Tools</div>
+    <div class="d-flex gap-2 flex-wrap">
+      <a href="https://www.voacap.com/hf/" target="_blank" class="btn btn-tp-outline btn-sm"><i class="fa-solid fa-chart-line me-1"></i>VOACAP</a>
+      <a href="https://www.pskreporter.info/pskmap.html" target="_blank" class="btn btn-tp-outline btn-sm"><i class="fa-solid fa-map me-1"></i>PSKReporter</a>
+      <a href="https://www.dxmaps.com/spots/map.php" target="_blank" class="btn btn-tp-outline btn-sm"><i class="fa-solid fa-satellite-dish me-1"></i>DXMaps</a>
+      <a href="https://www.hamqsl.com/solar.html" target="_blank" class="btn btn-tp-outline btn-sm"><i class="fa-solid fa-sun me-1"></i>HamQSL Solar</a>
+    </div>
+  </div>
+
+  <div style="margin-top:1rem;font-size:0.75rem;color:var(--text-faint)">
+    Data: <a href="https://www.swpc.noaa.gov" target="_blank" style="color:var(--cyan)">NOAA Space Weather Prediction Center</a>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function updateClock(){const n=new Date(),h=String(n.getUTCHours()).padStart(2,'0'),m=String(n.getUTCMinutes()).padStart(2,'0'),s=String(n.getUTCSeconds()).padStart(2,'0');document.getElementById('utcClock').textContent=`UTC ${h}:${m}:${s}`;}
+updateClock();setInterval(updateClock,1000);
+document.querySelectorAll('.nav-link:not(.dropdown-toggle),.dropdown-item').forEach(a=>{if(a.getAttribute('href')===(location.pathname.split('/').pop()||'index.html'))a.classList.add('active');});
+document.querySelectorAll('.fade-up').forEach((el,i)=>{setTimeout(()=>el.classList.add('visible'),80+i*60);});
+
+function getBandCondition(band,sfi,kp){
+  const freqs={'160m':1.8,'80m':3.5,'40m':7,'30m':10,'20m':14,'17m':18,'15m':21,'12m':24,'10m':28,'6m':50};
+  const mhz=freqs[band];
+  const geoFactor=kp<=2?1.0:kp<=4?0.7:0.3;
+  let score;
+  if(mhz<=3.5)score=geoFactor>0.8?2:geoFactor>0.5?1:0;
+  else if(mhz<=7)score=geoFactor>0.6?2:geoFactor>0.3?1:0;
+  else if(mhz<=14)score=(sfi>80&&geoFactor>0.5)?2:(sfi>65&&geoFactor>0.3)?1:0;
+  else if(mhz<=21)score=(sfi>110&&geoFactor>0.5)?2:(sfi>90&&geoFactor>0.3)?1:0;
+  else if(mhz<=28)score=(sfi>140&&geoFactor>0.6)?2:(sfi>120&&geoFactor>0.4)?1:0;
+  else score=sfi>180?1:0;
+  return score;
+}
+
+function renderBands(sfi,kp){
+  const bands=['160m','80m','40m','30m','20m','17m','15m','12m','10m','6m'];
+  const colors=['var(--red)','var(--yellow)','var(--green)'];
+  const labels=['Poor','Fair','Good'];
+  document.getElementById('bandConditions').innerHTML=bands.map(b=>{
+    const s=getBandCondition(b,sfi,kp);
+    return`<div class="col-6 col-md-2 col-lg-1">
+      <div style="border:1px solid var(--border);border-radius:8px;padding:0.6rem;text-align:center">
+        <div style="font-family:monospace;font-weight:700;font-size:0.9rem;margin-bottom:4px">${b}</div>
+        <div style="width:10px;height:10px;border-radius:50%;background:${colors[s]};margin:0 auto 4px"></div>
+        <div style="font-size:0.68rem;color:${colors[s]};font-weight:700">${labels[s]}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderMuf(sfi){
+  const muf=Math.min(50,Math.max(5,1.6+(sfi-65)*0.18));
+  const paths=[
+    {label:'Etobicoke → Europe (UK)',factor:1.0,icon:'fa-tower-broadcast'},
+    {label:'Etobicoke → Japan',factor:0.85,icon:'fa-torii-gate'},
+    {label:'Etobicoke → S. America',factor:1.05,icon:'fa-globe-americas'},
+    {label:'Etobicoke → W. Coast US',factor:0.95,icon:'fa-mountain'},
+  ];
+  document.getElementById('mufEstimates').innerHTML=paths.map(p=>{
+    const pmuf=(muf*p.factor).toFixed(1);
+    const pct=Math.min(100,(pmuf/50)*100);
+    const col=pmuf>21?'var(--green)':pmuf>10?'var(--yellow)':'var(--red)';
+    return`<div class="col-12 col-md-6">
+      <div style="border:1px solid var(--border);border-radius:8px;padding:0.75rem 1rem">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <span style="font-size:0.85rem"><i class="fa-solid ${p.icon} me-2" style="color:var(--teal)"></i>${p.label}</span>
+          <span style="font-family:monospace;font-size:1.1rem;font-weight:700;color:${col}">${pmuf} MHz</span>
+        </div>
+        <div style="background:var(--border);border-radius:4px;height:6px">
+          <div style="background:${col};width:${pct}%;height:6px;border-radius:4px;transition:width 0.8s"></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function loadSolar(){
+  let sfi=0,kp=0;
+  try{
+    const [r1,r2,r3,r4]=await Promise.allSettled([
+      fetch('https://services.swpc.noaa.gov/products/summary/10cm-flux.json').then(r=>r.json()),
+      fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json').then(r=>r.json()),
+      fetch('https://services.swpc.noaa.gov/json/sunspot_report.json').then(r=>r.json()),
+      fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json').then(r=>r.json()),
+    ]);
+    if(r1.status==='fulfilled'){const d=r1.value,l=Array.isArray(d)?d[d.length-1]:d;sfi=parseFloat(l?.flux||0);document.getElementById('sfiVal').textContent=sfi;document.getElementById('sfiVal').style.color=sfi>150?'var(--green)':sfi>100?'var(--yellow)':'var(--red)';}
+    if(r2.status==='fulfilled'){const d=r2.value,l=d[d.length-1];kp=parseFloat(l?.Kp||0);const ap=parseFloat(l?.a_running||0);document.getElementById('kindexVal').textContent=kp.toFixed(1);document.getElementById('kindexVal').style.color=kp<=2?'var(--green)':kp<=4?'var(--yellow)':'var(--red)';document.getElementById('aindexVal').textContent=ap.toFixed(0);}
+    if(r3.status==='fulfilled'){const d=r3.value;if(Array.isArray(d)&&d.length){const ts=d[d.length-1].time_tag;document.getElementById('ssnVal').textContent=d.filter(s=>s.time_tag===ts).reduce((a,s)=>a+(s.Numspot||0),0);}}
+    if(sfi>0){renderBands(sfi,kp);renderMuf(sfi);}
+  }catch(e){console.error(e);}
+}
+loadSolar();
+</script>
+</body>
+</html>

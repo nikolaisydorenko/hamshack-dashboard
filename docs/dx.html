@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HamShack — DX Cluster</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <link href="style.css" rel="stylesheet">
+</head>
+<body>
+<div class="bg-glow"></div>
+<nav class="navbar navbar-expand-lg navbar-dark tp-navbar">
+  <div class="container-fluid">
+    <a class="navbar-brand tp-brand" href="index.html"><i class="fa-solid fa-tower-broadcast me-2"></i>HAMSHACK</a>
+    <span class="navbar-text tp-callsign me-3">VA3CZT</span>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu"><span class="navbar-toggler-icon"></span></button>
+    <div class="collapse navbar-collapse" id="navMenu">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item"><a class="nav-link" href="index.html"><i class="fa-solid fa-gauge-high me-1"></i>Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link" href="repeaters.html"><i class="fa-solid fa-radio me-1"></i>Repeaters</a></li>
+        <li class="nav-item"><a class="nav-link" href="hf.html"><i class="fa-solid fa-sun me-1"></i>HF Propagation</a></li>
+        <li class="nav-item"><a class="nav-link" href="dx.html"><i class="fa-solid fa-satellite-dish me-1"></i>DX Cluster</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"><i class="fa-solid fa-screwdriver-wrench me-1"></i>Tools</a>
+          <ul class="dropdown-menu dropdown-menu-dark">
+            <li><a class="dropdown-item" href="callsign.html"><i class="fa-solid fa-id-card me-2"></i>Callsign Lookup</a></li>
+            <li><a class="dropdown-item" href="antenna.html"><i class="fa-solid fa-wifi me-2"></i>Antenna Calculator</a></li>
+            <li><a class="dropdown-item" href="bandplan.html"><i class="fa-solid fa-chart-bar me-2"></i>Band Plan</a></li>
+          </ul>
+        </li>
+      </ul>
+      <ul class="navbar-nav ms-auto align-items-center gap-2">
+        <li class="nav-item"><span class="navbar-text tp-utc" id="utcClock">UTC --:--:--</span></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid py-4 px-4">
+  <div class="row g-3 mb-3">
+    <div class="col-12 d-flex align-items-center gap-3 flex-wrap">
+      <h1 class="tp-page-title mb-0"><i class="fa-solid fa-satellite-dish me-2"></i>DX Cluster</h1>
+      <span id="lastUpdated" style="font-size:0.78rem;color:var(--text-faint)">Loading…</span>
+      <div class="ms-auto d-flex gap-2 align-items-center">
+        <select id="bandFilter" class="form-select tp-form-control" style="width:auto;font-size:0.85rem" onchange="load()">
+          <option value="all">All bands</option>
+          <option value="160m">160m</option>
+          <option value="80m">80m</option>
+          <option value="40m">40m</option>
+          <option value="30m">30m</option>
+          <option value="20m">20m</option>
+          <option value="17m">17m</option>
+          <option value="15m">15m</option>
+          <option value="12m">12m</option>
+          <option value="10m">10m</option>
+          <option value="6m">6m</option>
+          <option value="2m">2m</option>
+          <option value="70cm">70cm</option>
+        </select>
+        <button class="btn btn-tp-outline btn-sm" onclick="load()"><i class="fa-solid fa-arrows-rotate"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tp-card p-0" style="overflow:auto">
+    <table class="table tp-table mb-0">
+      <thead>
+        <tr>
+          <th style="width:120px">DX Call</th>
+          <th style="width:110px">Frequency</th>
+          <th style="width:70px">Band</th>
+          <th style="width:110px">Spotter</th>
+          <th>Comment</th>
+          <th style="width:90px">Time (UTC)</th>
+        </tr>
+      </thead>
+      <tbody id="dxBody">
+        <tr><td colspan="6" class="text-center" style="color:var(--text-faint);padding:2rem">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div style="font-size:0.75rem;color:var(--text-faint);margin-top:0.5rem">
+    <i class="fa-solid fa-circle-info me-1"></i>
+    Data via <a href="https://www.dxwatch.com" target="_blank" style="color:var(--cyan)">DX Watch</a> · Auto-refreshes every 60 s
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function updateClock(){const n=new Date(),h=String(n.getUTCHours()).padStart(2,'0'),m=String(n.getUTCMinutes()).padStart(2,'0'),s=String(n.getUTCSeconds()).padStart(2,'0');document.getElementById('utcClock').textContent=`UTC ${h}:${m}:${s}`;}
+updateClock();setInterval(updateClock,1000);
+document.querySelectorAll('.nav-link:not(.dropdown-toggle),.dropdown-item').forEach(a=>{if(a.getAttribute('href')===(location.pathname.split('/').pop()||'index.html'))a.classList.add('active');});
+
+const BAND_COLORS={'160m':'#9966ff','80m':'#ff6b6b','60m':'#ff9966','40m':'#ffcc00','30m':'#99ff66','20m':'#00d4aa','17m':'#66ccff','15m':'#4da6ff','12m':'#cc99ff','10m':'#ff6699','6m':'#ff99cc','2m':'#66ffcc','70cm':'#ffff66'};
+
+function freqToBand(f){
+  if(f>=1800&&f<2000)return'160m';if(f>=3500&&f<4000)return'80m';if(f>=5000&&f<5500)return'60m';
+  if(f>=7000&&f<7300)return'40m';if(f>=10100&&f<10150)return'30m';if(f>=14000&&f<14350)return'20m';
+  if(f>=18068&&f<18168)return'17m';if(f>=21000&&f<21450)return'15m';if(f>=24890&&f<24990)return'12m';
+  if(f>=28000&&f<29700)return'10m';if(f>=50000&&f<54000)return'6m';if(f>=144000&&f<148000)return'2m';
+  if(f>=430000&&f<440000)return'70cm';return'?';
+}
+
+function bandBadge(band){const col=BAND_COLORS[band]||'#888';return`<span style="font-size:0.72rem;padding:2px 7px;border-radius:4px;background:${col}22;color:${col};border:1px solid ${col};font-weight:700;font-family:monospace">${band||'?'}</span>`;}
+
+function fmtTime(iso){if(!iso)return'—';try{const d=new Date(iso);return d.toUTCString().slice(17,22);}catch{return iso.slice(0,16);}}
+
+async function load(){
+  const band=document.getElementById('bandFilter').value;
+  try{
+    const proxyUrl='https://api.allorigins.win/get?url='+encodeURIComponent('https://www.dxwatch.com/dxsd1/s.php?s=0&r=80');
+    const res=await fetch(proxyUrl);
+    const wrapper=await res.json();
+    const data=JSON.parse(wrapper.contents);
+    const now=new Date();
+    let spots=Object.values(data.s||{}).map(v=>{
+      if(v.length<6)return null;
+      const[spotter,freq,dx_call,comment,time_str]=v;
+      let iso=null;
+      try{
+        const parts=time_str.split();
+        const hhmm=parts[0].replace('z','');
+        const dt=new Date(`${parts[2]} ${parts[1]} ${now.getUTCFullYear()} ${hhmm.slice(0,2)}:${hhmm.slice(2)} UTC`);
+        iso=isNaN(dt)?null:dt.toISOString();
+      }catch{}
+      return{dx_call,frequency:parseFloat(freq),band:freqToBand(parseFloat(freq)),spotter,comment,time:iso};
+    }).filter(Boolean);
+    if(band!=='all')spots=spots.filter(s=>s.band===band);
+    spots.sort((a,b)=>(b.time||'').localeCompare(a.time||''));
+    spots=spots.slice(0,80);
+    if(!spots.length){
+      document.getElementById('dxBody').innerHTML=`<tr><td colspan="6" style="color:var(--text-faint);text-align:center;padding:1.5rem">No spots for this filter.</td></tr>`;
+      return;
+    }
+    document.getElementById('dxBody').innerHTML=spots.map(s=>{
+      const comment=(s.comment||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      return`<tr>
+        <td class="call-cell" style="font-size:1rem">${s.dx_call||'—'}</td>
+        <td class="freq-cell">${s.frequency.toFixed(1)} kHz</td>
+        <td>${bandBadge(s.band)}</td>
+        <td style="font-size:0.8rem;color:var(--text-faint)">${s.spotter||'—'}</td>
+        <td style="font-size:0.82rem;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${comment}">${comment||'—'}</td>
+        <td style="font-family:monospace;font-size:0.82rem;color:var(--text-faint)">${fmtTime(s.time)}</td>
+      </tr>`;
+    }).join('');
+    document.getElementById('lastUpdated').textContent=`Updated ${new Date().toUTCString().slice(17,22)} UTC · ${spots.length} spots`;
+  }catch(e){
+    document.getElementById('dxBody').innerHTML=`<tr><td colspan="6" style="color:var(--red);text-align:center;padding:1.5rem">Error loading spots: ${e.message}</td></tr>`;
+    document.getElementById('lastUpdated').textContent='Failed to load';
+  }
+}
+load();setInterval(load,60000);
+</script>
+</body>
+</html>

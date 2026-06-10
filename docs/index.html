@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HamShack — Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <link href="style.css" rel="stylesheet">
+</head>
+<body>
+<div class="bg-glow"></div>
+<nav class="navbar navbar-expand-lg navbar-dark tp-navbar">
+  <div class="container-fluid">
+    <a class="navbar-brand tp-brand" href="index.html"><i class="fa-solid fa-tower-broadcast me-2"></i>HAMSHACK</a>
+    <span class="navbar-text tp-callsign me-3">VA3CZT</span>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu"><span class="navbar-toggler-icon"></span></button>
+    <div class="collapse navbar-collapse" id="navMenu">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item"><a class="nav-link" href="index.html"><i class="fa-solid fa-gauge-high me-1"></i>Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link" href="repeaters.html"><i class="fa-solid fa-radio me-1"></i>Repeaters</a></li>
+        <li class="nav-item"><a class="nav-link" href="hf.html"><i class="fa-solid fa-sun me-1"></i>HF Propagation</a></li>
+        <li class="nav-item"><a class="nav-link" href="dx.html"><i class="fa-solid fa-satellite-dish me-1"></i>DX Cluster</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"><i class="fa-solid fa-screwdriver-wrench me-1"></i>Tools</a>
+          <ul class="dropdown-menu dropdown-menu-dark">
+            <li><a class="dropdown-item" href="callsign.html"><i class="fa-solid fa-id-card me-2"></i>Callsign Lookup</a></li>
+            <li><a class="dropdown-item" href="antenna.html"><i class="fa-solid fa-wifi me-2"></i>Antenna Calculator</a></li>
+            <li><a class="dropdown-item" href="bandplan.html"><i class="fa-solid fa-chart-bar me-2"></i>Band Plan</a></li>
+          </ul>
+        </li>
+      </ul>
+      <ul class="navbar-nav ms-auto align-items-center gap-2">
+        <li class="nav-item"><span class="navbar-text tp-utc" id="utcClock">UTC --:--:--</span></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid py-4 px-4">
+
+  <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+    <div>
+      <h1 class="tp-page-title mb-0">HamShack Dashboard</h1>
+      <div style="color:var(--text-faint); font-size:0.82rem; margin-top:2px">VA3CZT · Etobicoke, ON · EN92</div>
+    </div>
+  </div>
+
+  <!-- Solar stat cards -->
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-md-3">
+      <div class="tp-card fade-up">
+        <div class="tp-card-header mb-2"><i class="fa-solid fa-sun me-1"></i> Solar Flux</div>
+        <div class="tp-stat-value" id="sfi">—</div>
+        <div class="tp-stat-label">SFI · 10.7 cm</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="tp-card fade-up">
+        <div class="tp-card-header mb-2"><i class="fa-solid fa-magnet me-1"></i> K-Index</div>
+        <div class="tp-stat-value" id="kp">—</div>
+        <div class="tp-stat-label">Geomagnetic</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="tp-card fade-up">
+        <div class="tp-card-header mb-2"><i class="fa-solid fa-circle-dot me-1"></i> Sunspots</div>
+        <div class="tp-stat-value" id="ssn">—</div>
+        <div class="tp-stat-label">SSN today</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="tp-card fade-up">
+        <div class="tp-card-header mb-2"><i class="fa-solid fa-wind me-1"></i> Solar Wind</div>
+        <div class="tp-stat-value" id="wind">—</div>
+        <div class="tp-stat-label">km/s</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Weather -->
+  <div class="row g-3 mb-3">
+    <div class="col-12">
+      <div class="tp-card fade-up" id="weatherCard">
+        <div class="tp-card-header mb-2"><i class="fa-solid fa-cloud-sun me-1"></i> Weather at QTH — Etobicoke, ON</div>
+        <div id="weatherBody" class="d-flex align-items-center gap-4 flex-wrap">
+          <div style="color:var(--text-faint); font-size:0.88rem">Loading weather…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick access -->
+  <div class="tp-section-title mb-3"><i class="fa-solid fa-bolt me-1"></i> Quick Access</div>
+  <div class="row g-3">
+    <div class="col-6 col-md-4 col-lg-2">
+      <a href="repeaters.html" class="tp-link-card fade-up text-center">
+        <i class="fa-solid fa-radio fa-2x mb-2" style="color:var(--cyan)"></i>
+        <div style="font-weight:600; font-size:0.9rem">Repeater Finder</div>
+        <div style="font-size:0.78rem; color:var(--text-faint); margin-top:3px">VHF/UHF near your QTH</div>
+      </a>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+      <a href="hf.html" class="tp-link-card fade-up text-center">
+        <i class="fa-solid fa-sun fa-2x mb-2" style="color:var(--yellow)"></i>
+        <div style="font-weight:600; font-size:0.9rem">HF Propagation</div>
+        <div style="font-size:0.78rem; color:var(--text-faint); margin-top:3px">Solar data & band conditions</div>
+      </a>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+      <a href="dx.html" class="tp-link-card fade-up text-center">
+        <i class="fa-solid fa-satellite-dish fa-2x mb-2" style="color:var(--teal)"></i>
+        <div style="font-weight:600; font-size:0.9rem">DX Cluster</div>
+        <div style="font-size:0.78rem; color:var(--text-faint); margin-top:3px">Live DX spots</div>
+      </a>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+      <a href="callsign.html" class="tp-link-card fade-up text-center">
+        <i class="fa-solid fa-id-card fa-2x mb-2" style="color:var(--blue)"></i>
+        <div style="font-weight:600; font-size:0.9rem">Callsign Lookup</div>
+        <div style="font-size:0.78rem; color:var(--text-faint); margin-top:3px">FCC &amp; DXCC database</div>
+      </a>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+      <a href="antenna.html" class="tp-link-card fade-up text-center">
+        <i class="fa-solid fa-wifi fa-2x mb-2" style="color:var(--green)"></i>
+        <div style="font-weight:600; font-size:0.9rem">Antenna Calc</div>
+        <div style="font-size:0.78rem; color:var(--text-faint); margin-top:3px">Dipole, Yagi &amp; more</div>
+      </a>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+      <a href="bandplan.html" class="tp-link-card fade-up text-center">
+        <i class="fa-solid fa-chart-bar fa-2x mb-2" style="color:var(--red)"></i>
+        <div style="font-weight:600; font-size:0.9rem">Band Plan</div>
+        <div style="font-size:0.78rem; color:var(--text-faint); margin-top:3px">Canadian HF + VHF/UHF</div>
+      </a>
+    </div>
+  </div>
+
+  <div style="margin-top:2rem; font-size:0.75rem; color:var(--text-faint); text-align:center">
+    Solar data: <a href="https://www.swpc.noaa.gov" target="_blank">NOAA SWPC</a> &nbsp;·&nbsp;
+    Weather: <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> &nbsp;·&nbsp;
+    <a href="https://github.com/nikolaisydorenko/hamshack-dashboard" target="_blank"><i class="fa-brands fa-github me-1"></i>Self-host this dashboard</a>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function updateClock(){const n=new Date(),h=String(n.getUTCHours()).padStart(2,'0'),m=String(n.getUTCMinutes()).padStart(2,'0'),s=String(n.getUTCSeconds()).padStart(2,'0');document.getElementById('utcClock').textContent=`UTC ${h}:${m}:${s}`;}
+updateClock();setInterval(updateClock,1000);
+document.querySelectorAll('.nav-link:not(.dropdown-toggle),.dropdown-item').forEach(a=>{if(a.getAttribute('href')===(location.pathname.split('/').pop()||'index.html'))a.classList.add('active');});
+document.querySelectorAll('.fade-up').forEach((el,i)=>{setTimeout(()=>el.classList.add('visible'),80+i*60);});
+
+const WMO={0:['Clear','fa-sun','var(--yellow)'],1:['Mostly Clear','fa-sun','var(--yellow)'],2:['Partly Cloudy','fa-cloud-sun','var(--text-dim)'],3:['Overcast','fa-cloud','var(--text-faint)'],45:['Fog','fa-smog','var(--text-faint)'],48:['Icy Fog','fa-smog','var(--text-faint)'],51:['Light Drizzle','fa-cloud-drizzle','var(--blue)'],53:['Drizzle','fa-cloud-drizzle','var(--blue)'],55:['Heavy Drizzle','fa-cloud-drizzle','var(--blue)'],61:['Light Rain','fa-cloud-rain','var(--blue)'],63:['Rain','fa-cloud-rain','var(--blue)'],65:['Heavy Rain','fa-cloud-showers-heavy','var(--blue)'],71:['Light Snow','fa-snowflake','#c8e6ff'],73:['Snow','fa-snowflake','#c8e6ff'],75:['Heavy Snow','fa-snowflake','#c8e6ff'],80:['Showers','fa-cloud-rain','var(--blue)'],81:['Showers','fa-cloud-rain','var(--blue)'],82:['Heavy Showers','fa-cloud-showers-heavy','var(--blue)'],95:['Thunderstorm','fa-bolt','var(--yellow)'],96:['Thunderstorm+Hail','fa-bolt','var(--yellow)'],99:['Thunderstorm+Hail','fa-bolt','var(--yellow)']};
+
+async function loadSolar(){
+  const [r1,r2,r3,r4]=await Promise.allSettled([
+    fetch('https://services.swpc.noaa.gov/products/summary/10cm-flux.json').then(r=>r.json()),
+    fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json').then(r=>r.json()),
+    fetch('https://services.swpc.noaa.gov/json/sunspot_report.json').then(r=>r.json()),
+    fetch('https://services.swpc.noaa.gov/products/summary/solar-wind-speed.json').then(r=>r.json()),
+  ]);
+  if(r1.status==='fulfilled'){const d=r1.value,l=Array.isArray(d)?d[d.length-1]:d;const v=l?.flux??'—';document.getElementById('sfi').textContent=v;document.getElementById('sfi').style.color=v>150?'var(--green)':v>100?'var(--yellow)':'var(--red)';}
+  if(r2.status==='fulfilled'){const d=r2.value,l=d[d.length-1];const v=parseFloat(l?.Kp??0).toFixed(1);document.getElementById('kp').textContent=v;document.getElementById('kp').style.color=v<=2?'var(--green)':v<=4?'var(--yellow)':'var(--red)';}
+  if(r3.status==='fulfilled'){const d=r3.value;if(Array.isArray(d)&&d.length){const ts=d[d.length-1].time_tag;document.getElementById('ssn').textContent=d.filter(s=>s.time_tag===ts).reduce((a,s)=>a+(s.Numspot||0),0);}}
+  if(r4.status==='fulfilled'){const d=r4.value,l=Array.isArray(d)?d[d.length-1]:d;document.getElementById('wind').textContent=l?.proton_speed??'—';}
+}
+
+async function loadWeather(){
+  try{
+    const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude=43.6532&longitude=-79.3832&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code,precipitation&wind_speed_unit=kmh&temperature_unit=celsius&timezone=auto&forecast_days=1');
+    const d=await r.json();const c=d.current||{};
+    const code=c.weather_code||0;const[desc,icon,col]=WMO[code]||['Unknown','fa-question','var(--text-faint)'];
+    const dirs=['N','NE','E','SE','S','SW','W','NW'],wd=Math.round(((c.wind_direction_10m||0)+22.5)/45)%8;
+    document.getElementById('weatherBody').innerHTML=`
+      <i class="fa-solid ${icon} fa-3x" style="color:${col}"></i>
+      <div><div style="font-size:2.2rem;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--text)">${c.temperature_2m??'—'}°C</div><div style="color:var(--text-faint);font-size:0.82rem">Feels like ${c.apparent_temperature??'—'}°C</div></div>
+      <div style="font-size:0.88rem;color:var(--text-dim)">${desc}</div>
+      <div style="font-size:0.82rem;color:var(--text-faint);margin-left:auto;text-align:right">
+        <div>Humidity: <b>${c.relative_humidity_2m??'—'}%</b></div>
+        <div>Wind: <b>${c.wind_speed_10m??'—'} km/h ${dirs[wd]}</b></div>
+        <div>Precip: <b>${c.precipitation??0} mm</b></div>
+      </div>`;
+  }catch(e){document.getElementById('weatherBody').innerHTML=`<span style="color:var(--text-faint)">Weather unavailable</span>`;}
+}
+
+loadSolar();loadWeather();
+</script>
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HamShack — Antenna Calculator</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <link href="style.css" rel="stylesheet">
+</head>
+<body>
+<div class="bg-glow"></div>
+<nav class="navbar navbar-expand-lg navbar-dark tp-navbar">
+  <div class="container-fluid">
+    <a class="navbar-brand tp-brand" href="index.html"><i class="fa-solid fa-tower-broadcast me-2"></i>HAMSHACK</a>
+    <span class="navbar-text tp-callsign me-3">VA3CZT</span>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu"><span class="navbar-toggler-icon"></span></button>
+    <div class="collapse navbar-collapse" id="navMenu">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item"><a class="nav-link" href="index.html"><i class="fa-solid fa-gauge-high me-1"></i>Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link" href="repeaters.html"><i class="fa-solid fa-radio me-1"></i>Repeaters</a></li>
+        <li class="nav-item"><a class="nav-link" href="hf.html"><i class="fa-solid fa-sun me-1"></i>HF Propagation</a></li>
+        <li class="nav-item"><a class="nav-link" href="dx.html"><i class="fa-solid fa-satellite-dish me-1"></i>DX Cluster</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"><i class="fa-solid fa-screwdriver-wrench me-1"></i>Tools</a>
+          <ul class="dropdown-menu dropdown-menu-dark">
+            <li><a class="dropdown-item" href="callsign.html"><i class="fa-solid fa-id-card me-2"></i>Callsign Lookup</a></li>
+            <li><a class="dropdown-item" href="antenna.html"><i class="fa-solid fa-wifi me-2"></i>Antenna Calculator</a></li>
+            <li><a class="dropdown-item" href="bandplan.html"><i class="fa-solid fa-chart-bar me-2"></i>Band Plan</a></li>
+          </ul>
+        </li>
+      </ul>
+      <ul class="navbar-nav ms-auto align-items-center gap-2">
+        <li class="nav-item"><span class="navbar-text tp-utc" id="utcClock">UTC --:--:--</span></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid py-4 px-4" style="max-width:800px">
+  <h1 class="tp-page-title mb-4"><i class="fa-solid fa-wifi me-2"></i>Antenna Calculator</h1>
+
+  <!-- Inputs -->
+  <div class="tp-card mb-4">
+    <div class="row g-3 align-items-end">
+      <div class="col-12 col-md-5">
+        <label class="tp-card-header mb-1">Frequency (MHz)</label>
+        <input type="number" id="freqInput" class="form-control tp-form-control"
+               style="font-family:'JetBrains Mono',monospace;font-size:1.1rem"
+               value="146.52" step="0.001" min="0.1" oninput="calc()">
+      </div>
+      <div class="col-12 col-md-5">
+        <label class="tp-card-header mb-1">Velocity Factor: <span id="vfLabel">0.97</span></label>
+        <input type="range" class="form-range" id="vfInput" min="0.85" max="1.00" step="0.01" value="0.97" oninput="document.getElementById('vfLabel').textContent=this.value;calc()">
+        <div class="d-flex justify-content-between" style="font-size:0.68rem;color:var(--text-faint)"><span>0.85 (coax)</span><span>0.97 (wire)</span><span>1.00 (free)</span></div>
+      </div>
+      <div class="col-12 col-md-2">
+        <label class="tp-card-header mb-1">Quick Band</label>
+        <select id="bandPick" class="form-select tp-form-control" onchange="setBand()">
+          <option value="">—</option>
+          <option value="1.9">160m (1.9)</option>
+          <option value="3.75">80m (3.75)</option>
+          <option value="7.1">40m (7.1)</option>
+          <option value="10.125">30m (10.125)</option>
+          <option value="14.225">20m (14.225)</option>
+          <option value="18.1">17m (18.1)</option>
+          <option value="21.225">15m (21.225)</option>
+          <option value="24.94">12m (24.94)</option>
+          <option value="28.5">10m (28.5)</option>
+          <option value="50.125">6m (50.125)</option>
+          <option value="146.52">2m (146.52)</option>
+          <option value="446.0">70cm (446.0)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="results" class="row g-3"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function updateClock(){const n=new Date(),h=String(n.getUTCHours()).padStart(2,'0'),m=String(n.getUTCMinutes()).padStart(2,'0'),s=String(n.getUTCSeconds()).padStart(2,'0');document.getElementById('utcClock').textContent=`UTC ${h}:${m}:${s}`;}
+updateClock();setInterval(updateClock,1000);
+document.querySelectorAll('.nav-link:not(.dropdown-toggle),.dropdown-item').forEach(a=>{if(a.getAttribute('href')===(location.pathname.split('/').pop()||'index.html'))a.classList.add('active');});
+
+function setBand(){const v=document.getElementById('bandPick').value;if(v){document.getElementById('freqInput').value=v;calc();}}
+
+function m2ft(m){return(m*3.28084).toFixed(2);}
+function fmt(m){return`<span style="font-family:'JetBrains Mono',monospace;color:var(--cyan);font-size:1.3rem;font-weight:700">${m.toFixed(3)} m</span> <span style="color:var(--text-faint);font-size:0.85rem">(${m2ft(m)} ft)</span>`;}
+
+function card(title,icon,rows,note){
+  return`<div class="col-12 col-md-6">
+    <div class="tp-card h-100">
+      <div class="tp-card-header mb-3"><i class="fa-solid ${icon} me-1"></i> ${title}</div>
+      <table style="width:100%;border-collapse:collapse">
+        ${rows.map(([l,v])=>`<tr><td style="color:var(--text-faint);font-size:0.82rem;padding:0.3rem 0;width:160px">${l}</td><td>${v}</td></tr>`).join('')}
+      </table>
+      ${note?`<div style="margin-top:0.75rem;font-size:0.75rem;color:var(--text-faint)">${note}</div>`:''}
+    </div>
+  </div>`;
+}
+
+function calc(){
+  const f=parseFloat(document.getElementById('freqInput').value);
+  const vf=parseFloat(document.getElementById('vfInput').value);
+  if(!f||f<=0){document.getElementById('results').innerHTML='';return;}
+  const wl=(300/f)*vf;
+
+  const dipoleHalf=wl/4;
+  const dipoleTotal=wl/2;
+  const qw=wl/4;
+  const fiveEighths=wl*5/8;
+  const loop=wl;
+
+  // Yagi 3-element
+  const yDirector=wl*0.44;
+  const yDriven=wl*0.47;
+  const yReflector=wl*0.50;
+  const yBoom=wl*0.25+wl*0.20;
+
+  document.getElementById('results').innerHTML=
+    card('Half-Wave Dipole','ruler-horizontal',[
+      ['Each leg',fmt(dipoleHalf)],
+      ['Total length',fmt(dipoleTotal)],
+      ['Feed impedance','~72 Ω (unbalanced)'],
+    ],'Center-fed with coax + balun. Easiest antenna to build.')+
+    card('Quarter-Wave Vertical','broadcast-tower',[
+      ['Radiator',fmt(qw)],
+      ['Radials (×4)',fmt(qw)+' each'],
+      ['Feed impedance','~35 Ω'],
+    ],'Add 3–4 ground radials for best efficiency.')+
+    card('5/8-Wave Vertical','signal',[
+      ['Radiator',fmt(fiveEighths)],
+      ['Feed impedance','~50 Ω (with matching)'],
+      ['Gain vs ¼ wave','~3 dBi'],
+    ],'Popular for VHF/UHF mobile. Lower angle of radiation.')+
+    card('Full-Wave Loop','circle-dot',[
+      ['Perimeter',fmt(loop)],
+      ['Each side (square)',fmt(loop/4)],
+      ['Feed impedance','~100 Ω'],
+    ],'Delta or square loop. Quiet, low noise, good DX antenna.')+
+    card('3-Element Yagi','arrow-right',[
+      ['Director',fmt(yDirector)],
+      ['Driven element',fmt(yDriven)],
+      ['Reflector',fmt(yReflector)],
+      ['Boom length',fmt(yBoom)],
+    ],'~7–8 dBd forward gain. Spacing: dir 0.1λ, ref 0.2λ from driven.')+
+    `<div class="col-12">
+      <div class="tp-card" style="background:var(--surface-2)">
+        <div class="tp-card-header mb-2">Wavelength Summary — ${f} MHz</div>
+        <div class="row g-2 text-center">
+          <div class="col-6 col-md-3"><div style="font-size:0.75rem;color:var(--text-faint)">Full wavelength</div><div style="font-family:monospace;color:var(--cyan)">${wl.toFixed(3)} m</div></div>
+          <div class="col-6 col-md-3"><div style="font-size:0.75rem;color:var(--text-faint)">Half wavelength</div><div style="font-family:monospace;color:var(--cyan)">${(wl/2).toFixed(3)} m</div></div>
+          <div class="col-6 col-md-3"><div style="font-size:0.75rem;color:var(--text-faint)">Quarter wavelength</div><div style="font-family:monospace;color:var(--cyan)">${(wl/4).toFixed(3)} m</div></div>
+          <div class="col-6 col-md-3"><div style="font-size:0.75rem;color:var(--text-faint)">Velocity factor</div><div style="font-family:monospace;color:var(--teal)">${vf}</div></div>
+        </div>
+      </div>
+    </div>`;
+}
+calc();
+</script>
+</body>
+</html>
