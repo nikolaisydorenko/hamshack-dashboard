@@ -346,26 +346,59 @@ def api_callsign():
     call = request.args.get("call", "").strip().upper()
     if not call:
         return jsonify({"error": "callsign required"}), 400
+    # Try callook.info (US FCC database, no auth)
     try:
-        r = requests.get(f"http://api.hamdb.org/v1/json/{call}",
+        r = requests.get(f"https://callook.info/{call}/json",
                          headers={"User-Agent": "HamShackDashboard/1.0"}, timeout=8)
-        data = r.json()
-        cs = data.get("hamdb", {}).get("callsign", {})
-        if not cs or cs.get("call") in (None, "NOT_FOUND"):
-            return jsonify({"error": "Callsign not found"}), 404
-        return jsonify({
-            "call":    cs.get("call",""),
-            "name":    f"{cs.get('fname','')} {cs.get('name','')}".strip(),
-            "country": cs.get("country",""),
-            "state":   cs.get("state",""),
-            "grid":    cs.get("grid",""),
-            "class":   cs.get("class",""),
-            "expires": cs.get("expires",""),
-            "email":   cs.get("email",""),
-            "addr":    f"{cs.get('addr1','')} {cs.get('addr2','')}".strip(),
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        d = r.json()
+        if d.get("status") == "VALID":
+            loc = d.get("location", {})
+            oi  = d.get("otherInfo", {})
+            cur = d.get("current", {})
+            addr = d.get("address", {})
+            return jsonify({
+                "call":    cur.get("callsign", call),
+                "name":    d.get("name", "") or d.get("trustee", {}).get("name", ""),
+                "country": "United States",
+                "state":   addr.get("line2", "").split(",")[1].strip()[:2] if "," in addr.get("line2","") else "",
+                "grid":    loc.get("gridsquare", ""),
+                "class":   cur.get("operClass", ""),
+                "expires": oi.get("expiryDate", ""),
+                "email":   "",
+                "addr":    f"{addr.get('line1','')} {addr.get('line2','')}".strip(),
+                "source":  "FCC ULS",
+            })
+    except Exception:
+        pass
+    # Fall back to HamQTH DXCC lookup (covers any callsign, country/grid only)
+    try:
+        r = requests.get(f"https://www.hamqth.com/dxcc.php?callsign={call}",
+                         headers={"User-Agent": "HamShackDashboard/1.0"}, timeout=8)
+        import xml.etree.ElementTree as _ET
+        root = _ET.fromstring(r.content)
+        ns = "http://www.hamqth.com"
+        dxcc = root.find(f"{{{ns}}}dxcc")
+        if dxcc is not None:
+            def tx(tag): return (dxcc.findtext(f"{{{ns}}}{tag}") or "").strip()
+            name    = tx("name")
+            details = tx("details")
+            if name:
+                return jsonify({
+                    "call":    call,
+                    "name":    "",
+                    "country": name,
+                    "state":   details,
+                    "grid":    "",
+                    "class":   "",
+                    "expires": "",
+                    "email":   "",
+                    "addr":    "",
+                    "source":  "DXCC (name/address not available for non-US calls)",
+                    "note":    "Full details only available for US FCC-licensed amateurs. Visit QRZ.com for complete info.",
+                })
+    except Exception:
+        pass
+    return jsonify({"error": "Callsign not found"}), 404
 
 @app.route("/api/dx")
 def api_dx():
@@ -392,20 +425,32 @@ def api_pota():
 
 @app.route("/api/contests")
 def api_contests():
+    import re as _re
     try:
-        r = requests.get("https://www.contestcalendar.com/weeklycalcgi.php",
-                         params={"output": "rss"},
+        r = requests.get("https://www.contestcalendar.com/contestcal.php",
                          headers={"User-Agent": "HamShackDashboard/1.0"}, timeout=10)
-        root = ET.fromstring(r.content)
-        ns = {"dc": "http://purl.org/dc/elements/1.1/"}
+        html = r.text
+        # Each contest is in a <tr> with two <td>: name+link, and date/time
+        rows = _re.findall(r'<tr[^>]*>(.*?)</tr>', html, _re.DOTALL)
         items = []
-        for item in root.findall(".//item"):
-            title = item.findtext("title", "")
-            desc  = item.findtext("description", "")
-            link  = item.findtext("link", "")
-            date  = item.findtext("pubDate", "") or item.findtext("dc:date", "", ns)
-            items.append({"title": title, "description": desc, "link": link, "date": date})
-        return jsonify(items[:30])
+        for row in rows:
+            tds = _re.findall(r'<td[^>]*>(.*?)</td>', row, _re.DOTALL)
+            if len(tds) < 2:
+                continue
+            name_td, date_td = tds[0], tds[1]
+            # Skip header rows (month labels)
+            if 'colspan' in name_td or not name_td.strip():
+                continue
+            # Extract contest name (strip tags)
+            name = _re.sub(r'<[^>]+>', '', name_td).strip().lstrip('+').strip()
+            if not name:
+                continue
+            # Extract link if present
+            link_m = _re.search(r'href="(contestdetails\.php\?[^"]+)"', name_td)
+            link = ("https://www.contestcalendar.com/" + link_m.group(1)) if link_m else ""
+            date = _re.sub(r'<[^>]+>', '', date_td).strip()
+            items.append({"title": name, "description": date, "link": link, "date": date})
+        return jsonify(items[:40])
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
