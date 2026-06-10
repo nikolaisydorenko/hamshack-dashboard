@@ -2,12 +2,27 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
+
+{% if not settings.configured %}
+<div class="alert mb-4" style="background:rgba(255,209,102,0.12); border:1px solid var(--tp-yellow); border-radius:10px; padding:1rem 1.25rem">
+  <div class="d-flex align-items-center gap-3">
+    <i class="fa-solid fa-triangle-exclamation" style="color:var(--tp-yellow); font-size:1.4rem"></i>
+    <div>
+      <div style="font-weight:600; color:#fff">Station not configured</div>
+      <div style="font-size:0.85rem; color:var(--tp-muted)">Set your callsign and home QTH to get the most out of HamShack.</div>
+    </div>
+    <a href="/settings" class="btn btn-tp ms-auto">
+      <i class="fa-solid fa-gear me-1"></i>Set up now
+    </a>
+  </div>
+</div>
+{% endif %}
+
 <div class="row g-3 mb-4">
   <div class="col-12">
     <h5 class="tp-section-title"><i class="fa-solid fa-gauge-high me-2"></i>Dashboard</h5>
   </div>
 
-  <!-- Stat cards -->
   <div class="col-6 col-md-3">
     <div class="tp-card text-center">
       <div class="tp-card-header">QSOs Logged</div>
@@ -18,8 +33,13 @@
   <div class="col-6 col-md-3">
     <div class="tp-card text-center">
       <div class="tp-card-header">Callsign</div>
-      <div class="tp-stat-value" style="font-size:1.6rem">{{ callsign }}</div>
-      <div class="tp-stat-label">Ontario, Canada</div>
+      {% if settings.callsign %}
+      <div class="tp-stat-value" style="font-size:1.6rem">{{ settings.callsign }}</div>
+      <div class="tp-stat-label">{{ settings.home_label or 'QTH not set' }}</div>
+      {% else %}
+      <div class="tp-stat-value" style="font-size:1.1rem; color:var(--tp-muted)">Not set</div>
+      <div class="tp-stat-label"><a href="/settings" style="color:var(--tp-accent)">Configure →</a></div>
+      {% endif %}
     </div>
   </div>
   <div class="col-6 col-md-3">
@@ -44,19 +64,19 @@
     <h5 class="tp-section-title"><i class="fa-solid fa-bolt me-2"></i>Quick Access</h5>
   </div>
   {% set links = [
-    ('/repeaters', 'fa-radio', 'Repeater Finder', 'VHF/UHF near Etobicoke', 'tp-accent'),
-    ('/hf', 'fa-sun', 'HF Propagation', 'Solar data & band conditions', 'tp-accent2'),
-    ('/log', 'fa-book', 'Contact Log', 'Log and export QSOs', 'tp-accent'),
-    ('/aprs', 'fa-map-location-dot', 'APRS Map', 'Live position tracking', 'tp-accent2'),
+    ('/repeaters', 'fa-radio',            'Repeater Finder',  'VHF/UHF near your QTH'),
+    ('/hf',        'fa-sun',              'HF Propagation',   'Solar data & band conditions'),
+    ('/log',       'fa-book',             'Contact Log',      'Log and export QSOs'),
+    ('/aprs',      'fa-map-location-dot', 'APRS Map',         'Live position tracking'),
   ] %}
-  {% for href, icon, title, desc, color in links %}
+  {% for href, icon, title, desc in links %}
   <div class="col-6 col-md-3">
     <a href="{{ href }}" class="text-decoration-none">
-      <div class="tp-card h-100" style="border-color: rgba(0,150,255,0.1); transition: border-color 0.2s;"
-           onmouseover="this.style.borderColor='var(--{{ color }})'" onmouseout="this.style.borderColor='rgba(0,150,255,0.1)'">
-        <i class="fa-solid {{ icon }} mb-2" style="font-size:1.5rem; color: var(--{{ color }})"></i>
+      <div class="tp-card h-100" style="border-color:rgba(0,150,255,0.1); transition:border-color 0.2s;"
+           onmouseover="this.style.borderColor='var(--tp-accent)'" onmouseout="this.style.borderColor='rgba(0,150,255,0.1)'">
+        <i class="fa-solid {{ icon }} mb-2" style="font-size:1.5rem; color:var(--tp-accent)"></i>
         <div style="font-weight:600; color:#fff; margin-bottom:0.2rem">{{ title }}</div>
-        <div style="font-size:0.8rem; color: var(--tp-muted)">{{ desc }}</div>
+        <div style="font-size:0.8rem; color:var(--tp-muted)">{{ desc }}</div>
       </div>
     </a>
   </div>
@@ -89,7 +109,7 @@
     {% else %}
     <div class="tp-card text-center" style="padding:2.5rem">
       <i class="fa-solid fa-book-open" style="font-size:2rem; color:var(--tp-muted)"></i>
-      <div class="mt-2" style="color:var(--tp-muted)">No contacts logged yet. <a href="/log" style="color:var(--tp-accent)">Log your first QSO</a></div>
+      <div class="mt-2" style="color:var(--tp-muted)">No contacts yet. <a href="/log" style="color:var(--tp-accent)">Log your first QSO</a></div>
     </div>
     {% endif %}
   </div>

@@ -4,126 +4,199 @@
 {% block content %}
 <div class="row g-3 mb-3">
   <div class="col-12">
-    <h5 class="tp-section-title"><i class="fa-solid fa-radio me-2"></i>Repeater Finder — Etobicoke, ON</h5>
+    <h5 class="tp-section-title"><i class="fa-solid fa-radio me-2"></i>Repeater Finder</h5>
   </div>
+</div>
 
-  <!-- Filters -->
+<!-- Search controls -->
+<div class="row g-3 mb-3">
   <div class="col-12">
     <div class="tp-card">
-      <div class="row g-2 align-items-end">
+      <div class="row g-3 align-items-end">
+
+        <!-- Location -->
+        <div class="col-12 col-md-4">
+          <label class="tp-card-header d-block mb-1">Search Location</label>
+          <div class="input-group">
+            <input type="text" id="locationInput" class="form-control tp-form-control"
+                   placeholder="City, postal code, or address"
+                   value="{{ settings.home_label }}">
+            <button class="btn btn-tp-outline" onclick="geocodeSearch()" title="Find">
+              <i class="fa-solid fa-magnifying-glass"></i>
+            </button>
+          </div>
+          <div style="font-size:0.75rem; margin-top:4px; color:var(--tp-muted)" id="coordDisplay">
+            {% if settings.home_lat %}
+              {{ "%.4f"|format(settings.home_lat) }}, {{ "%.4f"|format(settings.home_lon) }}
+            {% else %}
+              <span style="color:var(--tp-yellow)">
+                <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                <a href="/settings" style="color:var(--tp-yellow)">Set your home QTH in Settings</a> or search above
+              </span>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Band -->
         <div class="col-6 col-md-2">
-          <label class="tp-card-header d-block">Band</label>
+          <label class="tp-card-header d-block mb-1">Band</label>
           <select id="filterBand" class="form-select tp-form-control">
-            <option value="%25">All bands</option>
+            <option value="all">All bands</option>
             <option value="2m">2m (VHF)</option>
             <option value="70cm">70cm (UHF)</option>
+            <option value="6m">6m</option>
+            <option value="10m">10m</option>
           </select>
         </div>
+
+        <!-- Radius -->
         <div class="col-6 col-md-3">
-          <label class="tp-card-header d-block">Radius: <span id="distLabel">50</span> km</label>
-          <input type="range" class="form-range" id="filterDist" min="10" max="150" step="10" value="50"
+          <label class="tp-card-header d-block mb-1">Radius: <span id="distLabel">50</span> km</label>
+          <input type="range" class="form-range" id="filterDist" min="10" max="200" step="10" value="50"
                  oninput="document.getElementById('distLabel').textContent=this.value">
         </div>
-        <div class="col-12 col-md-3">
-          <button class="btn btn-tp w-100" onclick="loadRepeaters()">
+
+        <!-- Buttons -->
+        <div class="col-12 col-md-3 d-flex gap-2">
+          <button class="btn btn-tp flex-fill" onclick="searchRepeaters()">
             <i class="fa-solid fa-magnifying-glass me-1"></i>Search
           </button>
+          <button class="btn btn-tp-outline" id="chirpBtn" onclick="exportChirp()" style="display:none" title="Export CHIRP CSV">
+            <i class="fa-solid fa-file-arrow-down"></i>
+          </button>
         </div>
-        <div class="col-12 col-md-4 text-md-end">
-          <a id="chirpExportBtn" href="/api/export/chirp" class="btn btn-tp-outline">
-            <i class="fa-solid fa-file-arrow-down me-1"></i>Export CHIRP CSV
-          </a>
-        </div>
+
       </div>
     </div>
   </div>
 </div>
 
-<!-- Loading / results -->
-<div id="loadingDiv" class="text-center py-5" style="display:none!important">
+<!-- Results -->
+<div id="loadingDiv" class="text-center py-5" style="display:none">
   <div class="tp-spinner mx-auto mb-3"></div>
-  <div style="color:var(--tp-muted); font-size:0.85rem">Fetching from RepeaterBook…</div>
+  <div style="color:var(--tp-muted); font-size:0.85rem">Fetching repeater data…</div>
 </div>
 
 <div id="resultsDiv">
   <div class="tp-card text-center" style="padding:3rem; color:var(--tp-muted)">
     <i class="fa-solid fa-tower-broadcast" style="font-size:2rem"></i>
     <div class="mt-2">Hit Search to find repeaters near you</div>
+    {% if not settings.home_lat %}
+    <div class="mt-2">
+      <a href="/settings" class="btn btn-tp-outline btn-sm mt-2">
+        <i class="fa-solid fa-gear me-1"></i>Set up your station first
+      </a>
+    </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-const LAT = 43.6490, LON = -79.5469;
+let searchLat = {{ settings.home_lat if settings.home_lat else 'null' }};
+let searchLon = {{ settings.home_lon if settings.home_lon else 'null' }};
+let lastResults = [];
 
-function loadRepeaters() {
-  const band = document.getElementById('filterBand').value;
-  const dist = document.getElementById('filterDist').value;
+function geocodeSearch() {
+  const q = document.getElementById('locationInput').value.trim();
+  if (!q) return;
 
-  const loadDiv = document.getElementById('loadingDiv');
-  const resDiv  = document.getElementById('resultsDiv');
-  loadDiv.style.display = 'block';
-  resDiv.innerHTML = '';
-
-  fetch(`/api/repeaters?lat=${LAT}&lon=${LON}&distance=${dist}&band=${band}`)
+  fetch('/api/geocode?q=' + encodeURIComponent(q))
     .then(r => r.json())
-    .then(data => {
-      loadDiv.style.display = 'none';
-      const results = data.results || [];
-      if (!results.length) {
-        resDiv.innerHTML = '<div class="tp-card text-center" style="padding:2rem;color:var(--tp-muted)">No repeaters found in this range.</div>';
-        return;
-      }
-      renderTable(results);
-    })
-    .catch(e => {
-      loadDiv.style.display = 'none';
-      resDiv.innerHTML = `<div class="tp-card text-center" style="color:var(--tp-red);padding:2rem">Error: ${e.message}</div>`;
+    .then(d => {
+      if (d.error) { alert('Location not found. Try a different search.'); return; }
+      searchLat = d.lat;
+      searchLon = d.lon;
+      document.getElementById('coordDisplay').textContent =
+        d.lat.toFixed(4) + ', ' + d.lon.toFixed(4);
+      document.getElementById('locationInput').value =
+        d.label.split(',').slice(0,3).join(',').trim();
     });
 }
 
-function renderTable(data) {
-  const resDiv = document.getElementById('resultsDiv');
-  let rows = data.map(r => {
-    const rx = parseFloat(r.Frequency || 0).toFixed(5);
-    const txRaw = parseFloat(r['Input Freq'] || r.Input_Freq || r.Frequency || 0);
-    const rx_f = parseFloat(r.Frequency || 0);
-    const offset = (txRaw - rx_f).toFixed(3);
-    const offsetStr = txRaw > rx_f ? `+${offset}` : txRaw < rx_f ? `${offset}` : '0.000';
-    const ctcss = r.CTCSS || r.PL || '—';
-    const dist  = r.distance ? parseFloat(r.distance).toFixed(1) + ' km' : '—';
-    const use   = r.Use || r.use || '';
-    const badge = use.toLowerCase().includes('open')
-      ? '<span class="tp-badge tp-badge-good">OPEN</span>'
-      : '<span class="tp-badge tp-badge-fair">CLOSED</span>';
+function searchRepeaters() {
+  if (!searchLat || !searchLon) {
+    alert('Please enter a location first.');
+    return;
+  }
+  const dist = document.getElementById('filterDist').value;
+  const band = document.getElementById('filterBand').value;
 
+  document.getElementById('loadingDiv').style.display = 'block';
+  document.getElementById('resultsDiv').innerHTML = '';
+  document.getElementById('chirpBtn').style.display = 'none';
+
+  fetch(`/api/repeaters?lat=${searchLat}&lon=${searchLon}&distance=${dist}&band=${band}`)
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('loadingDiv').style.display = 'none';
+      if (data.error) {
+        document.getElementById('resultsDiv').innerHTML =
+          `<div class="tp-card text-center" style="color:var(--tp-red);padding:2rem">${data.error}</div>`;
+        return;
+      }
+      lastResults = data.results || [];
+      renderTable(lastResults, data.count);
+      if (lastResults.length > 0) document.getElementById('chirpBtn').style.display = 'inline-flex';
+    })
+    .catch(e => {
+      document.getElementById('loadingDiv').style.display = 'none';
+      document.getElementById('resultsDiv').innerHTML =
+        `<div class="tp-card text-center" style="color:var(--tp-red);padding:2rem">Error: ${e.message}</div>`;
+    });
+}
+
+function renderTable(data, total) {
+  if (!data.length) {
+    document.getElementById('resultsDiv').innerHTML =
+      '<div class="tp-card text-center" style="padding:2rem;color:var(--tp-muted)">No repeaters found in this range.</div>';
+    return;
+  }
+
+  const rows = data.map(r => {
+    const offStr = r.offset_mhz > 0 ? `+${r.offset_mhz.toFixed(3)}`
+                 : r.offset_mhz < 0 ? `${r.offset_mhz.toFixed(3)}` : '0.000';
+    const ctcss = r.ctcss && parseFloat(r.ctcss) > 0 ? r.ctcss + ' Hz' : '—';
     return `<tr>
-      <td class="call-cell">${r.Callsign || '—'}</td>
-      <td class="freq-cell">${rx} MHz</td>
-      <td class="offset-cell">${offsetStr} MHz</td>
-      <td style="font-family:monospace; font-size:0.85rem">${ctcss} Hz</td>
-      <td style="font-size:0.85rem">${r.Landmark || r.City || '—'}</td>
-      <td style="font-size:0.82rem; color:var(--tp-muted)">${dist}</td>
-      <td>${badge}</td>
+      <td class="call-cell">${r.callsign || '—'}</td>
+      <td class="freq-cell">${r.frequency.toFixed(4)} MHz</td>
+      <td class="offset-cell">${offStr} MHz</td>
+      <td style="font-family:monospace;font-size:0.85rem">${ctcss}</td>
+      <td style="font-size:0.85rem">${r.mode || 'FM'}</td>
+      <td style="font-size:0.82rem;color:var(--tp-muted)">${r.city || '—'}</td>
+      <td style="font-family:monospace;font-size:0.82rem;color:var(--tp-muted)">${r.distance} km</td>
     </tr>`;
   }).join('');
 
-  resDiv.innerHTML = `
+  document.getElementById('resultsDiv').innerHTML = `
     <div class="tp-card p-0" style="overflow:auto">
-      <div class="px-3 py-2" style="font-size:0.8rem; color:var(--tp-muted); border-bottom:1px solid var(--tp-border)">
-        Found <strong style="color:var(--tp-accent)">${data.length}</strong> repeaters
+      <div class="px-3 py-2" style="font-size:0.8rem;color:var(--tp-muted);border-bottom:1px solid var(--tp-border)">
+        Found <strong style="color:var(--tp-accent)">${total}</strong> repeaters
+        ${total > 200 ? ' <span style="color:var(--tp-yellow)">(showing nearest 200)</span>' : ''}
       </div>
       <table class="table tp-table mb-0">
         <thead><tr>
-          <th>Callsign</th><th>RX Freq</th><th>Offset</th><th>CTCSS</th><th>Location</th><th>Distance</th><th>Status</th>
+          <th>Callsign</th><th>Frequency</th><th>Offset</th><th>CTCSS</th><th>Mode</th><th>Location</th><th>Distance</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>`;
 }
 
-// Auto-load on page open
-loadRepeaters();
+function exportChirp() {
+  if (!searchLat || !searchLon) return;
+  const dist = document.getElementById('filterDist').value;
+  window.location.href = `/api/export/chirp?lat=${searchLat}&lon=${searchLon}&distance=${dist}`;
+}
+
+document.getElementById('locationInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') geocodeSearch();
+});
+
+// Auto-search if home QTH is configured
+{% if settings.home_lat %}
+window.addEventListener('load', searchRepeaters);
+{% endif %}
 </script>
 {% endblock %}

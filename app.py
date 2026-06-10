@@ -3,14 +3,15 @@ import requests
 import sqlite3
 import csv
 import io
+import math
+import time
 from datetime import datetime, timezone
 
 app = Flask(__name__)
 
-DEFAULT_LAT = 43.6490
-DEFAULT_LON = -79.5469
-CALLSIGN = "VA3CZT"
-RB_HEADERS = {"User-Agent": "TalkpodApp/1.0 VA3CZT"}
+# ── In-memory repeater cache (refreshes every 6 hours) ────────────────────────
+_repeater_cache = {"data": None, "ts": 0}
+CACHE_TTL = 6 * 3600
 
 
 def get_db():
@@ -34,8 +35,53 @@ def init_db():
             notes TEXT
         )
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        )
+    """)
     conn.commit()
     conn.close()
+
+
+def get_settings():
+    conn = get_db()
+    rows = conn.execute("SELECT key, value FROM settings").fetchall()
+    conn.close()
+    s = {r["key"]: r["value"] for r in rows}
+    lat = float(s["home_lat"]) if s.get("home_lat") else None
+    lon = float(s["home_lon"]) if s.get("home_lon") else None
+    return {
+        "callsign":   s.get("callsign", ""),
+        "home_lat":   lat,
+        "home_lon":   lon,
+        "home_label": s.get("home_label", ""),
+        "configured": bool(s.get("callsign")),
+    }
+
+
+def haversine(lat1, lon1, lat2, lon2):
+    R = 6371
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = (math.sin(dlat / 2) ** 2
+         + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2))
+         * math.sin(dlon / 2) ** 2)
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+def fetch_hearham():
+    now = time.time()
+    if _repeater_cache["data"] is None or now - _repeater_cache["ts"] > CACHE_TTL:
+        r = requests.get(
+            "https://hearham.com/api/repeaters/v1?lat=0&lng=0&range=99999",
+            timeout=30,
+            headers={"User-Agent": "HamShackDashboard/1.0"}
+        )
+        _repeater_cache["data"] = r.json()
+        _repeater_cache["ts"] = now
+    return _repeater_cache["data"]
 
 
 # ── Pages ──────────────────────────────────────────────────────────────────────
@@ -48,18 +94,21 @@ def index():
         "SELECT * FROM contacts ORDER BY datetime DESC LIMIT 5"
     ).fetchall()
     conn.close()
-    return render_template("index.html", contact_count=contact_count,
-                           recent=[dict(r) for r in recent], callsign=CALLSIGN)
+    settings = get_settings()
+    return render_template("index.html",
+                           contact_count=contact_count,
+                           recent=[dict(r) for r in recent],
+                           settings=settings)
 
 
 @app.route("/repeaters")
 def repeaters():
-    return render_template("repeaters.html")
+    return render_template("repeaters.html", settings=get_settings())
 
 
 @app.route("/hf")
 def hf():
-    return render_template("hf.html")
+    return render_template("hf.html", settings=get_settings())
 
 
 @app.route("/log")
@@ -69,59 +118,151 @@ def log():
         "SELECT * FROM contacts ORDER BY datetime DESC LIMIT 200"
     ).fetchall()
     conn.close()
-    return render_template("log.html", contacts=[dict(c) for c in contacts])
+    return render_template("log.html",
+                           contacts=[dict(c) for c in contacts],
+                           settings=get_settings())
 
 
 @app.route("/aprs")
 def aprs():
-    return render_template("aprs.html")
+    return render_template("aprs.html", settings=get_settings())
+
+
+@app.route("/settings")
+def settings_page():
+    return render_template("settings.html", settings=get_settings())
 
 
 # ── API ────────────────────────────────────────────────────────────────────────
 
-@app.route("/api/repeaters")
-def api_repeaters():
-    lat = request.args.get("lat", DEFAULT_LAT)
-    lon = request.args.get("lon", DEFAULT_LON)
-    distance = request.args.get("distance", 50)
-    band = request.args.get("band", "%25")
+@app.route("/api/settings", methods=["GET"])
+def api_settings_get():
+    return jsonify(get_settings())
 
-    url = (
-        "https://www.repeaterbook.com/api/export.php"
-        f"?country=Canada&state=Ontario"
-        f"&band={band}&freq=%25&use=OPEN"
-        f"&near_lat={lat}&near_lon={lon}"
-        f"&distance={distance}&Dunit=km"
-        f"&call=%25&status_id=%25&features=%25"
-        f"&tone=%25&digi=false&format=json"
-    )
 
+@app.route("/api/settings", methods=["POST"])
+def api_settings_save():
+    data = request.json or {}
+    conn = get_db()
+    for key in ("callsign", "home_lat", "home_lon", "home_label"):
+        if key in data:
+            val = str(data[key]).strip().upper() if key == "callsign" else str(data[key]).strip()
+            conn.execute(
+                "INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                (key, val)
+            )
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/geocode")
+def api_geocode():
+    q = request.args.get("q", "").strip()
+    if not q:
+        return jsonify({"error": "query required"}), 400
     try:
-        resp = requests.get(url, timeout=12, headers=RB_HEADERS)
-        return jsonify(resp.json())
+        r = requests.get(
+            "https://nominatim.openstreetmap.org/search",
+            params={"q": q, "format": "json", "limit": 1},
+            headers={"User-Agent": "HamShackDashboard/1.0"},
+            timeout=8
+        )
+        results = r.json()
+        if not results:
+            return jsonify({"error": "not found"}), 404
+        hit = results[0]
+        return jsonify({
+            "lat":   float(hit["lat"]),
+            "lon":   float(hit["lon"]),
+            "label": hit.get("display_name", q),
+        })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/repeaters")
+def api_repeaters():
+    try:
+        lat = float(request.args.get("lat", 0))
+        lon = float(request.args.get("lon", 0))
+        dist_km = float(request.args.get("distance", 50))
+        band = request.args.get("band", "all")
+    except ValueError:
+        return jsonify({"error": "invalid parameters"}), 400
+
+    if lat == 0 and lon == 0:
+        return jsonify({"error": "location required"}), 400
+
+    try:
+        all_reps = fetch_hearham()
+    except Exception as e:
+        return jsonify({"error": f"Could not fetch repeater data: {e}"}), 500
+
+    results = []
+    for r in all_reps:
+        try:
+            rlat = float(r["latitude"])
+            rlon = float(r["longitude"])
+            d = haversine(lat, lon, rlat, rlon)
+            if d > dist_km:
+                continue
+
+            freq_hz = int(r.get("frequency") or 0)
+            off_hz  = int(r.get("offset") or 0)
+            freq_mhz = freq_hz / 1e6
+
+            # Band filter
+            if band == "2m" and not (144 <= freq_mhz <= 148):
+                continue
+            if band == "70cm" and not (420 <= freq_mhz <= 450):
+                continue
+            if band == "6m" and not (50 <= freq_mhz <= 54):
+                continue
+            if band == "10m" and not (28 <= freq_mhz <= 30):
+                continue
+
+            results.append({
+                "callsign": r.get("callsign", ""),
+                "frequency": round(freq_mhz, 4),
+                "offset_hz": off_hz,
+                "offset_mhz": round(off_hz / 1e6, 3),
+                "ctcss": r.get("encode") or "",
+                "mode": r.get("mode", "FM"),
+                "city": r.get("city", ""),
+                "description": r.get("description", ""),
+                "distance": round(d, 1),
+            })
+        except Exception:
+            continue
+
+    results.sort(key=lambda x: x["distance"])
+    return jsonify({"count": len(results), "results": results[:200]})
 
 
 @app.route("/api/export/chirp")
 def export_chirp():
-    lat = request.args.get("lat", DEFAULT_LAT)
-    lon = request.args.get("lon", DEFAULT_LON)
-    url = (
-        "https://www.repeaterbook.com/api/export.php"
-        f"?country=Canada&state=Ontario"
-        f"&band=%25&freq=%25&use=OPEN"
-        f"&near_lat={lat}&near_lon={lon}"
-        f"&distance=80&Dunit=km"
-        f"&call=%25&status_id=%25&features=%25"
-        f"&tone=%25&digi=false&format=json"
-    )
+    try:
+        lat = float(request.args.get("lat", 0))
+        lon = float(request.args.get("lon", 0))
+        dist_km = float(request.args.get("distance", 80))
+    except ValueError:
+        return jsonify({"error": "invalid parameters"}), 400
 
     try:
-        resp = requests.get(url, timeout=12, headers=RB_HEADERS)
-        repeaters = resp.json().get("results", [])
+        all_reps = fetch_hearham()
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+    nearby = []
+    for r in all_reps:
+        try:
+            d = haversine(lat, lon, float(r["latitude"]), float(r["longitude"]))
+            if d <= dist_km:
+                nearby.append((d, r))
+        except Exception:
+            continue
+    nearby.sort(key=lambda x: x[0])
 
     output = io.StringIO()
     w = csv.writer(output)
@@ -132,21 +273,20 @@ def export_chirp():
         "URCALL", "RPT1CALL", "RPT2CALL", "DVCODE"
     ])
 
-    for i, r in enumerate(repeaters[:128]):
+    for i, (d, r) in enumerate(nearby[:128]):
         try:
-            rx = float(r.get("Frequency") or 0)
-            tx_raw = r.get("Input Freq") or r.get("Input_Freq") or rx
-            tx = float(tx_raw)
-            offset = abs(rx - tx)
-            duplex = "+" if tx > rx else "-" if tx < rx else ""
-            ctcss = r.get("CTCSS") or r.get("PL") or ""
-            tone_mode = "Tone" if ctcss else ""
-            name = ((r.get("Callsign") or "") + " " + (r.get("Landmark") or ""))[:8].strip()
-            comment = (r.get("Landmark") or r.get("City") or "")[:64]
+            freq_mhz = float(r.get("frequency", 0)) / 1e6
+            off_hz   = float(r.get("offset", 0))
+            off_mhz  = abs(off_hz) / 1e6
+            duplex   = "+" if off_hz > 0 else "-" if off_hz < 0 else ""
+            ctcss    = r.get("encode") or ""
+            tone_mode = "Tone" if ctcss and float(ctcss) > 0 else ""
+            name     = (r.get("callsign") or "")[:8]
+            comment  = (r.get("city") or "")[:64]
             w.writerow([
-                i, name, f"{rx:.5f}", duplex, f"{offset:.5f}",
-                tone_mode, ctcss if ctcss else "88.5", "88.5",
-                "023", "NN", "FM", "5.00", "", comment,
+                i, name, f"{freq_mhz:.5f}", duplex, f"{off_mhz:.5f}",
+                tone_mode, ctcss if (ctcss and float(ctcss) > 0) else "88.5", "88.5",
+                "023", "NN", r.get("mode", "FM"), "5.00", "", comment,
                 "", "", "", ""
             ])
         except Exception:
@@ -157,7 +297,7 @@ def export_chirp():
         io.BytesIO(output.getvalue().encode()),
         mimetype="text/csv",
         as_attachment=True,
-        download_name="talkpod_chirp.csv"
+        download_name="hamshack_chirp.csv"
     )
 
 
@@ -165,7 +305,6 @@ def export_chirp():
 def api_solar():
     results = {}
 
-    # Solar flux — returns list: [{flux, time_tag}]
     try:
         r = requests.get("https://services.swpc.noaa.gov/products/summary/10cm-flux.json", timeout=8)
         data = r.json()
@@ -174,7 +313,6 @@ def api_solar():
     except Exception:
         results["sfi"] = None
 
-    # K-index history — list of {time_tag, Kp, a_running}; take most recent
     try:
         r = requests.get("https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json", timeout=8)
         data = r.json()
@@ -186,7 +324,6 @@ def api_solar():
         results["kp"] = None
         results["ap"] = None
 
-    # Solar wind speed — returns list: [{proton_speed, time_tag}]
     try:
         r = requests.get("https://services.swpc.noaa.gov/products/summary/solar-wind-speed.json", timeout=8)
         data = r.json()
@@ -195,13 +332,11 @@ def api_solar():
     except Exception:
         results["wind_speed"] = None
 
-    # Sunspot report — list of spot observations; count unique regions as proxy for SSN
     try:
         r = requests.get("https://services.swpc.noaa.gov/json/sunspot_report.json", timeout=8)
         data = r.json()
         if isinstance(data, list) and data:
-            # Sum area from most recent timestamp as SSN proxy
-            latest_ts = data[-1].get("time_tag") if data else None
+            latest_ts = data[-1].get("time_tag")
             latest_spots = [s for s in data if s.get("time_tag") == latest_ts]
             results["ssn"] = sum(s.get("Numspot", 0) for s in latest_spots)
         else:
@@ -227,7 +362,6 @@ def api_log_add():
     data = request.json or {}
     if not data.get("callsign"):
         return jsonify({"error": "callsign required"}), 400
-
     dt = data.get("datetime") or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     conn = get_db()
     cur = conn.execute("""
@@ -260,35 +394,44 @@ def api_log_delete(cid):
 
 @app.route("/api/log/export/adif")
 def export_adif():
+    settings = get_settings()
     conn = get_db()
     contacts = conn.execute("SELECT * FROM contacts ORDER BY datetime DESC").fetchall()
     conn.close()
 
-    lines = ["<ADIF_VER:5>3.1.0\n<PROGRAMID:8>TALKPOD\n<EOH>\n"]
+    prog = "HAMSHACK"
+    lines = [f"<ADIF_VER:5>3.1.0\n<PROGRAMID:{len(prog)}>{prog}\n<EOH>\n"]
     for c in contacts:
         dt_str = (c["datetime"] or "").replace("-", "").replace(":", "").replace("T", " ").split(".")[0]
         date_part = dt_str[:8]
         time_part = dt_str[9:15] if len(dt_str) > 9 else "000000"
         freq_mhz = f"{float(c['frequency']):.4f}" if c["frequency"] else ""
         call = c["callsign"]
-        line = (
-            f"<CALL:{len(call)}>{call}"
-            f"<QSO_DATE:8>{date_part}"
-            f"<TIME_ON:6>{time_part}"
-            f"<FREQ:{len(freq_mhz)}>{freq_mhz}" if freq_mhz else ""
-            f"<MODE:{len(c['mode'] or 'FM')}>{c['mode'] or 'FM'}"
-            f"<RST_SENT:{len(c['rst_sent'] or '59')}>{c['rst_sent'] or '59'}"
-            f"<RST_RCVD:{len(c['rst_recv'] or '59')}>{c['rst_recv'] or '59'}"
-            f"<EOR>\n"
-        )
-        lines.append(line)
+        mode = c["mode"] or "FM"
+        rst_s = c["rst_sent"] or "59"
+        rst_r = c["rst_recv"] or "59"
+        parts = [
+            f"<CALL:{len(call)}>{call}",
+            f"<QSO_DATE:8>{date_part}",
+            f"<TIME_ON:6>{time_part}",
+            f"<MODE:{len(mode)}>{mode}",
+            f"<RST_SENT:{len(rst_s)}>{rst_s}",
+            f"<RST_RCVD:{len(rst_r)}>{rst_r}",
+        ]
+        if freq_mhz:
+            parts.append(f"<FREQ:{len(freq_mhz)}>{freq_mhz}")
+        if settings["callsign"]:
+            op = settings["callsign"]
+            parts.append(f"<OPERATOR:{len(op)}>{op}")
+        parts.append("<EOR>")
+        lines.append("".join(parts) + "\n")
 
     content = "".join(lines)
     return send_file(
         io.BytesIO(content.encode()),
         mimetype="text/plain",
         as_attachment=True,
-        download_name="talkpod_log.adi"
+        download_name="hamshack_log.adi"
     )
 
 

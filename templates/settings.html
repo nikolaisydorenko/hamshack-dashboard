@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-4">
+  <div class="col-12">
+    <h5 class="tp-section-title"><i class="fa-solid fa-gear me-2"></i>Station Setup</h5>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-12 col-md-6">
+    <div class="tp-card">
+      <div class="tp-card-header mb-3">Your Station</div>
+
+      <div class="mb-3">
+        <label class="tp-card-header d-block mb-1">Callsign</label>
+        <input type="text" id="inputCallsign" class="form-control tp-form-control"
+               placeholder="e.g. VA3CZT" maxlength="12"
+               style="text-transform:uppercase; font-family:monospace; font-size:1.1rem; letter-spacing:2px"
+               value="{{ settings.callsign }}"
+               oninput="this.value=this.value.toUpperCase()">
+      </div>
+
+      <div class="mb-3">
+        <label class="tp-card-header d-block mb-1">Home QTH — Search by city or address</label>
+        <div class="input-group">
+          <input type="text" id="inputLocation" class="form-control tp-form-control"
+                 placeholder="e.g. Etobicoke, ON or M9A 0A1"
+                 value="{{ settings.home_label }}">
+          <button class="btn btn-tp" onclick="geocode()">
+            <i class="fa-solid fa-magnifying-glass"></i> Find
+          </button>
+        </div>
+        <div id="geocodeMsg" class="mt-1" style="font-size:0.8rem; display:none"></div>
+      </div>
+
+      <div class="row g-2 mb-3">
+        <div class="col-6">
+          <label class="tp-card-header d-block mb-1">Latitude</label>
+          <input type="number" id="inputLat" class="form-control tp-form-control"
+                 placeholder="43.6490" step="0.0001"
+                 value="{{ settings.home_lat if settings.home_lat else '' }}">
+        </div>
+        <div class="col-6">
+          <label class="tp-card-header d-block mb-1">Longitude</label>
+          <input type="number" id="inputLon" class="form-control tp-form-control"
+                 placeholder="-79.5469" step="0.0001"
+                 value="{{ settings.home_lon if settings.home_lon else '' }}">
+        </div>
+      </div>
+
+      <button class="btn btn-tp w-100" onclick="saveSettings()">
+        <i class="fa-solid fa-floppy-disk me-1"></i>Save Settings
+      </button>
+      <div id="saveMsg" class="mt-2 text-center" style="font-size:0.85rem; display:none"></div>
+    </div>
+  </div>
+
+  <!-- Map preview -->
+  <div class="col-12 col-md-6">
+    <div class="tp-card p-0" style="overflow:hidden; border-radius:12px; height:360px">
+      <div id="settingsMap" style="width:100%; height:100%"></div>
+    </div>
+    <div class="tp-card mt-3" style="font-size:0.82rem; color:var(--tp-muted); line-height:1.7">
+      <i class="fa-solid fa-circle-info me-1" style="color:var(--tp-accent2)"></i>
+      Your callsign and home QTH are stored locally on this server only.
+      They are used to personalise the repeater search, APRS map, and contact log exports.
+      No data is sent to any third party.
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const defaultLat = {{ settings.home_lat if settings.home_lat else 43.6490 }};
+const defaultLon = {{ settings.home_lon if settings.home_lon else -79.5469 }};
+
+const map = L.map('settingsMap').setView([defaultLat, defaultLon], 11);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap contributors'
+}).addTo(map);
+
+let marker = L.marker([defaultLat, defaultLon]).addTo(map);
+
+function setMapLocation(lat, lon, label) {
+  map.setView([lat, lon], 12);
+  marker.setLatLng([lat, lon]);
+  if (label) marker.bindPopup(label).openPopup();
+}
+
+function geocode() {
+  const q = document.getElementById('inputLocation').value.trim();
+  if (!q) return;
+  const msg = document.getElementById('geocodeMsg');
+  msg.textContent = 'Searching…';
+  msg.style.color = 'var(--tp-muted)';
+  msg.style.display = 'block';
+
+  fetch('/api/geocode?q=' + encodeURIComponent(q))
+    .then(r => r.json())
+    .then(d => {
+      if (d.error) { msg.textContent = 'Not found. Try a different search.'; msg.style.color='var(--tp-red)'; return; }
+      document.getElementById('inputLat').value = d.lat.toFixed(5);
+      document.getElementById('inputLon').value = d.lon.toFixed(5);
+      document.getElementById('inputLocation').value = d.label.split(',').slice(0,3).join(',').trim();
+      setMapLocation(d.lat, d.lon, d.label.split(',')[0]);
+      msg.textContent = '✓ Location found';
+      msg.style.color = 'var(--tp-green)';
+    })
+    .catch(() => { msg.textContent = 'Geocoding error.'; msg.style.color='var(--tp-red)'; });
+}
+
+function saveSettings() {
+  const callsign = document.getElementById('inputCallsign').value.trim().toUpperCase();
+  const lat = parseFloat(document.getElementById('inputLat').value);
+  const lon = parseFloat(document.getElementById('inputLon').value);
+  const label = document.getElementById('inputLocation').value.trim();
+
+  if (!callsign) { showSaveMsg('Enter your callsign.', 'var(--tp-red)'); return; }
+  if (isNaN(lat) || isNaN(lon)) { showSaveMsg('Enter or search for a location.', 'var(--tp-red)'); return; }
+
+  fetch('/api/settings', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ callsign, home_lat: lat, home_lon: lon, home_label: label })
+  }).then(r => r.json()).then(d => {
+    if (d.status === 'ok') {
+      showSaveMsg('Settings saved! Reloading…', 'var(--tp-green)');
+      setTimeout(() => window.location.href = '/', 1000);
+    }
+  }).catch(() => showSaveMsg('Save failed.', 'var(--tp-red)'));
+}
+
+function showSaveMsg(msg, color) {
+  const el = document.getElementById('saveMsg');
+  el.textContent = msg;
+  el.style.color = color;
+  el.style.display = 'block';
+}
+
+// Allow clicking map to set location
+map.on('click', function(e) {
+  const lat = e.latlng.lat.toFixed(5);
+  const lon = e.latlng.lng.toFixed(5);
+  document.getElementById('inputLat').value = lat;
+  document.getElementById('inputLon').value = lon;
+  marker.setLatLng(e.latlng);
+});
+
+// Update map when lat/lon fields change manually
+['inputLat','inputLon'].forEach(id => {
+  document.getElementById(id).addEventListener('change', () => {
+    const lat = parseFloat(document.getElementById('inputLat').value);
+    const lon = parseFloat(document.getElementById('inputLon').value);
+    if (!isNaN(lat) && !isNaN(lon)) setMapLocation(lat, lon);
+  });
+});
+
+document.getElementById('inputLocation').addEventListener('keydown', e => {
+  if (e.key === 'Enter') geocode();
+});
+</script>
+{% endblock %}
